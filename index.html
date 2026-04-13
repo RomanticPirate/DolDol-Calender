@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<title>Our Days - 공유 달력</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --primary: #5B6AFF;
+  --primary-light: #E8EAFF;
+  --bg: #F5F6FA;
+  --card: #FFFFFF;
+  --text: #1A1A2E;
+  --text-sub: #7C7C8A;
+  --border: #E8E8EE;
+  --danger: #FF6B6B;
+  --success: #4ECDC4;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --radius: 16px;
+}
+body { font-family: -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; overflow-x: hidden; }
+
+/* Header */
+.header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
+.header-title { font-size:20px; font-weight:700; color:var(--primary); }
+.header-icons { display:flex; gap:12px; }
+.header-icons button { background:none; border:none; font-size:22px; cursor:pointer; padding:4px; }
+
+/* Bottom Nav */
+.bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--card); border-top:1px solid var(--border); display:flex; z-index:100; padding-bottom:env(safe-area-inset-bottom); }
+.nav-item { flex:1; display:flex; flex-direction:column; align-items:center; padding:10px 0 8px; cursor:pointer; border:none; background:none; color:var(--text-sub); font-size:11px; gap:4px; transition:color .2s; }
+.nav-item.active { color:var(--primary); }
+.nav-item .nav-icon { font-size:22px; }
+
+/* FAB */
+.fab { position:fixed; bottom:76px; right:calc(50% - 220px); width:56px; height:56px; border-radius:50%; background:var(--primary); color:#fff; border:none; font-size:28px; cursor:pointer; box-shadow:0 4px 16px rgba(91,106,255,0.4); z-index:99; display:flex; align-items:center; justify-content:center; transition:transform .2s; }
+.fab:active { transform:scale(0.9); }
+@media(max-width:480px){ .fab { right:24px; } }
+
+/* Views */
+.view { display:none; padding-bottom:70px; }
+.view.active { display:block; }
+
+/* Calendar */
+.month-nav { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; }
+.month-nav button { background:none; border:none; font-size:20px; cursor:pointer; padding:8px; color:var(--text); }
+.month-title { font-size:18px; font-weight:600; }
+.weekday-header { display:grid; grid-template-columns:repeat(7,1fr); padding:0 12px; }
+.weekday-header span { text-align:center; font-size:12px; color:var(--text-sub); padding:8px 0; font-weight:500; }
+.weekday-header span:first-child { color:var(--danger); }
+.weekday-header span:last-child { color:var(--primary); }
+.calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); padding:0 12px; gap:2px; }
+.cal-day { aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:8px; cursor:pointer; border-radius:12px; transition:background .15s; position:relative; }
+.cal-day:hover { background:var(--primary-light); }
+.cal-day.today .day-num { background:var(--primary); color:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; }
+.cal-day.selected { background:var(--primary-light); }
+.cal-day.other-month { opacity:0.3; }
+.cal-day .day-num { font-size:14px; font-weight:500; width:32px; height:32px; display:flex; align-items:center; justify-content:center; }
+.cal-day.sunday .day-num { color:var(--danger); }
+.cal-day.saturday .day-num { color:var(--primary); }
+.cal-day.holiday .day-num { color:var(--danger) !important; }
+.cal-day .holiday-name { font-size:8px; color:var(--danger); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; padding:0 2px; line-height:1.2; }
+.cal-day .dots { display:flex; gap:3px; margin-top:2px; }
+.cal-day .dot { width:5px; height:5px; border-radius:50%; }
+
+/* Day Events Panel */
+.day-panel { padding:16px 20px; }
+.day-panel-header { font-size:16px; font-weight:600; margin-bottom:12px; color:var(--text); }
+.event-card { display:flex; align-items:center; gap:12px; padding:14px 16px; background:var(--card); border-radius:12px; margin-bottom:8px; box-shadow:var(--shadow); cursor:pointer; transition:transform .15s; }
+.event-card:active { transform:scale(0.98); }
+.event-color-bar { width:4px; height:40px; border-radius:2px; flex-shrink:0; }
+.event-info { flex:1; min-width:0; }
+.event-title { font-size:15px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.event-meta { font-size:12px; color:var(--text-sub); margin-top:2px; }
+.event-dday { font-size:13px; font-weight:700; color:var(--primary); white-space:nowrap; }
+.no-events { text-align:center; padding:40px 20px; color:var(--text-sub); font-size:14px; }
+
+/* Event List View */
+.event-list-section { padding:16px 20px; }
+.event-list-date-header { font-size:13px; font-weight:600; color:var(--primary); margin:16px 0 8px; padding-bottom:4px; border-bottom:2px solid var(--primary-light); }
+
+/* Calendar Management */
+.calendar-mgmt { padding:16px 20px; }
+.cal-group { background:var(--card); border-radius:var(--radius); padding:16px; margin-bottom:12px; box-shadow:var(--shadow); }
+.cal-group-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.cal-group-name { font-size:16px; font-weight:600; }
+.cal-group-count { font-size:12px; color:var(--text-sub); background:var(--bg); padding:2px 10px; border-radius:12px; }
+.cal-invite-code { font-size:12px; color:var(--text-sub); margin-bottom:8px; }
+.cal-invite-code span { font-weight:700; color:var(--primary); letter-spacing:2px; }
+.cal-members { display:flex; gap:8px; flex-wrap:wrap; }
+.cal-member { display:flex; align-items:center; gap:6px; font-size:13px; padding:4px 10px; background:var(--bg); border-radius:20px; }
+.cal-member-dot { width:10px; height:10px; border-radius:50%; }
+.cal-mgmt-actions { display:flex; gap:8px; margin-top:16px; }
+.cal-mgmt-actions button { flex:1; padding:14px; border-radius:12px; border:2px dashed var(--border); background:var(--card); font-size:14px; cursor:pointer; font-weight:500; transition:all .2s; }
+.cal-mgmt-actions button:hover { border-color:var(--primary); color:var(--primary); }
+
+/* Settings */
+.settings-view { padding:16px 20px; }
+.settings-section { background:var(--card); border-radius:var(--radius); margin-bottom:12px; box-shadow:var(--shadow); overflow:hidden; }
+.settings-section-title { font-size:13px; font-weight:600; color:var(--text-sub); padding:12px 16px 4px; }
+.settings-item { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border); cursor:pointer; }
+.settings-item:last-child { border-bottom:none; }
+.settings-item-left { display:flex; align-items:center; gap:12px; }
+.settings-item-icon { font-size:20px; }
+.settings-item-label { font-size:15px; }
+.settings-item-value { font-size:14px; color:var(--text-sub); }
+
+/* Modal */
+.modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:200; justify-content:center; align-items:flex-end; }
+.modal-overlay.show { display:flex; }
+.modal { background:var(--card); border-radius:20px 20px 0 0; width:100%; max-width:480px; max-height:85vh; overflow-y:auto; padding:24px 20px 40px; animation:slideUp .3s ease; }
+@keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.modal-header h3 { font-size:18px; font-weight:700; }
+.modal-close { background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-sub); padding:4px; }
+.modal-save { background:var(--primary); color:#fff; border:none; padding:8px 20px; border-radius:20px; font-size:14px; font-weight:600; cursor:pointer; }
+
+/* Form */
+.form-group { margin-bottom:16px; }
+.form-label { font-size:13px; font-weight:600; color:var(--text-sub); margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+.form-input { width:100%; padding:12px 14px; border:2px solid var(--border); border-radius:12px; font-size:15px; outline:none; transition:border-color .2s; font-family:inherit; }
+.form-input:focus { border-color:var(--primary); }
+textarea.form-input { resize:none; height:80px; }
+.form-row { display:flex; gap:12px; }
+.form-row .form-group { flex:1; }
+
+/* Color Picker */
+.color-picker { display:flex; gap:8px; flex-wrap:wrap; }
+.color-option { width:36px; height:36px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:all .15s; }
+.color-option.selected { border-color:var(--text); transform:scale(1.15); }
+
+/* Toggle */
+.toggle { width:48px; height:28px; border-radius:14px; background:var(--border); position:relative; cursor:pointer; transition:background .2s; border:none; flex-shrink:0; }
+.toggle.on { background:var(--primary); }
+.toggle::after { content:''; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:#fff; transition:left .2s; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
+.toggle.on::after { left:23px; }
+
+/* Select styled */
+.form-select { width:100%; padding:12px 14px; border:2px solid var(--border); border-radius:12px; font-size:15px; outline:none; background:var(--card); font-family:inherit; cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237C7C8A' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; }
+
+/* Notification View */
+.notif-list { padding:16px 20px; }
+.notif-item { display:flex; gap:12px; padding:14px 16px; background:var(--card); border-radius:12px; margin-bottom:8px; box-shadow:var(--shadow); }
+.notif-icon { font-size:24px; flex-shrink:0; }
+.notif-content { flex:1; }
+.notif-text { font-size:14px; line-height:1.4; }
+.notif-time { font-size:12px; color:var(--text-sub); margin-top:4px; }
+.notif-unread { background:var(--primary-light); }
+
+/* Onboarding */
+.onboarding { position:fixed; top:0; left:0; right:0; bottom:0; background:linear-gradient(180deg, #FFF8F0 0%, #FFFFFF 60%); z-index:300; display:flex; flex-direction:column; align-items:center; padding:0 32px 40px; max-width:480px; margin:0 auto; overflow-y:auto; }
+.onboarding.hidden { display:none; }
+.onboarding h1 { font-size:36px; font-weight:800; color:var(--primary); margin-top:24px; letter-spacing:-1px; }
+.onboarding p { color:var(--text-sub); font-size:15px; margin-top:8px; margin-bottom:32px; text-align:center; line-height:1.6; }
+.onboarding .form-input { margin-bottom:12px; text-align:center; font-size:16px; padding:16px 18px; }
+.onboarding-img { width:100%; max-width:320px; margin-top:40px; border-radius:24px; overflow:hidden; box-shadow:0 8px 32px rgba(91,106,255,0.15); }
+.onboarding-img img { width:100%; display:block; }
+.onboarding-footer { margin-top:24px; font-size:12px; color:#B0B0C0; text-align:center; }
+.btn-primary { width:100%; padding:16px; background:var(--primary); color:#fff; border:none; border-radius:14px; font-size:16px; font-weight:600; cursor:pointer; transition:opacity .2s; }
+.btn-primary:active { opacity:0.8; }
+.btn-secondary { width:100%; padding:16px; background:var(--bg); color:var(--text); border:none; border-radius:14px; font-size:16px; font-weight:600; cursor:pointer; margin-top:8px; }
+
+/* Event Detail Modal */
+.event-detail-header { text-align:center; padding:20px 0; }
+.event-detail-emoji { font-size:48px; }
+.event-detail-title { font-size:22px; font-weight:700; margin-top:8px; }
+.event-detail-dday { font-size:16px; color:var(--primary); font-weight:600; margin-top:4px; }
+.event-detail-info { padding:16px 0; border-top:1px solid var(--border); }
+.event-detail-row { display:flex; align-items:center; gap:12px; padding:10px 0; font-size:14px; }
+.event-detail-row .icon { font-size:18px; width:24px; text-align:center; }
+.event-detail-actions { display:flex; gap:8px; margin-top:16px; }
+.event-detail-actions button { flex:1; padding:12px; border-radius:12px; font-size:14px; font-weight:600; cursor:pointer; border:none; }
+.btn-edit { background:var(--primary-light); color:var(--primary); }
+.btn-delete { background:#FFE8E8; color:var(--danger); }
+
+/* Comments */
+.comments-section { margin-top:16px; border-top:1px solid var(--border); padding-top:16px; }
+.comments-title { font-size:14px; font-weight:600; margin-bottom:12px; }
+.comment-item { display:flex; gap:8px; margin-bottom:12px; }
+.comment-avatar { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#fff; flex-shrink:0; }
+.comment-body { flex:1; }
+.comment-name { font-size:12px; font-weight:600; }
+.comment-text { font-size:14px; margin-top:2px; line-height:1.4; }
+.comment-time { font-size:11px; color:var(--text-sub); margin-top:2px; }
+.comment-input-wrap { display:flex; gap:8px; margin-top:12px; }
+.comment-input-wrap input { flex:1; padding:10px 14px; border:2px solid var(--border); border-radius:20px; font-size:14px; outline:none; }
+.comment-input-wrap input:focus { border-color:var(--primary); }
+.comment-input-wrap button { background:var(--primary); color:#fff; border:none; width:40px; height:40px; border-radius:50%; font-size:18px; cursor:pointer; }
+
+/* Toast */
+.toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:var(--text); color:#fff; padding:12px 24px; border-radius:24px; font-size:14px; z-index:400; opacity:0; transition:opacity .3s; pointer-events:none; }
+.toast.show { opacity:1; }
+</style>
+</head>
+<body>
+
+<!-- Onboarding -->
+<div class="onboarding" id="onboarding">
+  <div class="onboarding-img"><img src="temp/title_img.png" alt="Our Days"></div>
+  <h1>Our Days</h1>
+  <p>우리가 함께 하는 날들</p>
+  <input type="text" class="form-input" id="onboard-name" placeholder="닉네임을 입력하세요" maxlength="10">
+  <button class="btn-primary" onclick="completeOnboarding()">시작하기</button>
+  <div class="onboarding-footer">&copy; 2026 JJW. All rights reserved.</div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-title">Our Days</div>
+  <div class="header-icons">
+    <button onclick="showNotifView()" id="notif-btn">🔔</button>
+    <button onclick="showCalendarMgmt()">👤</button>
+  </div>
+</div>
+
+<!-- Calendar View -->
+<div class="view active" id="view-calendar">
+  <div class="month-nav">
+    <button onclick="changeMonth(-1)">◀</button>
+    <div class="month-title" id="month-title"></div>
+    <button onclick="changeMonth(1)">▶</button>
+  </div>
+  <div class="weekday-header">
+    <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+  </div>
+  <div class="calendar-grid" id="calendar-grid"></div>
+  <div class="day-panel" id="day-panel"></div>
+</div>
+
+<!-- Event List View -->
+<div class="view" id="view-events">
+  <div class="event-list-section" id="event-list"></div>
+</div>
+
+<!-- Notification View -->
+<div class="view" id="view-notif">
+  <div class="notif-list" id="notif-list"></div>
+</div>
+
+<!-- Settings View -->
+<div class="view" id="view-settings">
+  <div class="settings-view" id="settings-content"></div>
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fab-btn" onclick="openEventModal()">+</button>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <button class="nav-item active" data-view="view-calendar" onclick="switchView('view-calendar')">
+    <span class="nav-icon">📅</span>캘린더
+  </button>
+  <button class="nav-item" data-view="view-events" onclick="switchView('view-events')">
+    <span class="nav-icon">📋</span>일정
+  </button>
+  <button class="nav-item" data-view="view-notif" onclick="switchView('view-notif')">
+    <span class="nav-icon">🔔</span>알림
+  </button>
+  <button class="nav-item" data-view="view-settings" onclick="switchView('view-settings')">
+    <span class="nav-icon">⚙️</span>설정
+  </button>
+</div>
+
+<!-- Event Modal -->
+<div class="modal-overlay" id="event-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">새 이벤트</h3>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="modal-save" onclick="saveEvent()">저장</button>
+        <button class="modal-close" onclick="closeModal('event-modal')">✕</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">📌 제목</label>
+      <input type="text" class="form-input" id="evt-title" placeholder="이벤트 제목">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">📅 날짜</label>
+        <input type="date" class="form-input" id="evt-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">📅 종료일</label>
+        <input type="date" class="form-input" id="evt-end-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="justify-content:space-between;">
+        <span>🕐 종일 이벤트</span>
+        <button class="toggle" id="evt-allday" onclick="toggleAllday()"></button>
+      </label>
+    </div>
+    <div id="time-fields" style="display:block;">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">시작</label>
+          <input type="time" class="form-input" id="evt-start-time" value="09:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">종료</label>
+          <input type="time" class="form-input" id="evt-end-time" value="10:00">
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">🔄 반복</label>
+      <select class="form-select" id="evt-repeat">
+        <option value="none">반복 없음</option>
+        <option value="daily">매일</option>
+        <option value="weekly">매주</option>
+        <option value="monthly">매월</option>
+        <option value="yearly">매년</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">📁 카테고리</label>
+      <select class="form-select" id="evt-category">
+        <option value="general">일반</option>
+        <option value="anniversary">기념일</option>
+        <option value="birthday">생일</option>
+        <option value="meeting">약속</option>
+        <option value="travel">여행</option>
+        <option value="work">업무</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">🎨 색상</label>
+      <div class="color-picker" id="color-picker"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">🔔 알림</label>
+      <select class="form-select" id="evt-alarm">
+        <option value="none">알림 없음</option>
+        <option value="on">이벤트 시간</option>
+        <option value="5m">5분 전</option>
+        <option value="15m">15분 전</option>
+        <option value="30m">30분 전</option>
+        <option value="1h">1시간 전</option>
+        <option value="1d" selected>1일 전</option>
+        <option value="1w">1주 전</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">📅 캘린더</label>
+      <select class="form-select" id="evt-calendar"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">📝 메모</label>
+      <textarea class="form-input" id="evt-memo" placeholder="메모를 입력하세요"></textarea>
+    </div>
+    <input type="hidden" id="evt-edit-id">
+  </div>
+</div>
+
+<!-- Event Detail Modal -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal" id="detail-content"></div>
+</div>
+
+<!-- Calendar Management Modal -->
+<div class="modal-overlay" id="cal-mgmt-modal">
+  <div class="modal" id="cal-mgmt-content"></div>
+</div>
+
+<!-- New Calendar Modal -->
+<div class="modal-overlay" id="new-cal-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>새 캘린더</h3>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="modal-save" onclick="createCalendar()">만들기</button>
+        <button class="modal-close" onclick="closeModal('new-cal-modal')">✕</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">📛 캘린더 이름</label>
+      <input type="text" class="form-input" id="new-cal-name" placeholder="예: 가족 달력">
+    </div>
+    <div class="form-group">
+      <label class="form-label">아이콘</label>
+      <div class="color-picker">
+        <span class="color-option selected" data-icon="👨‍👩‍👧‍👦" onclick="selectIcon(this)" style="background:none;font-size:28px;display:flex;align-items:center;justify-content:center;">👨‍👩‍👧‍👦</span>
+        <span class="color-option" data-icon="💑" onclick="selectIcon(this)" style="background:none;font-size:28px;display:flex;align-items:center;justify-content:center;">💑</span>
+        <span class="color-option" data-icon="👥" onclick="selectIcon(this)" style="background:none;font-size:28px;display:flex;align-items:center;justify-content:center;">👥</span>
+        <span class="color-option" data-icon="💼" onclick="selectIcon(this)" style="background:none;font-size:28px;display:flex;align-items:center;justify-content:center;">💼</span>
+        <span class="color-option" data-icon="⛪" onclick="selectIcon(this)" style="background:none;font-size:28px;display:flex;align-items:center;justify-content:center;">⛪</span>
+        <span class="color-option" data-icon="🏫" onclick="selectIcon(this)" style="background:none;font-size:28px;display:flex;align-items:center;justify-content:center;">🏫</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Join Calendar Modal -->
+<div class="modal-overlay" id="join-cal-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>캘린더 참여</h3>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="modal-save" onclick="joinCalendar()">참여하기</button>
+        <button class="modal-close" onclick="closeModal('join-cal-modal')">✕</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">🔗 초대 코드</label>
+      <input type="text" class="form-input" id="join-code" placeholder="6자리 초대 코드 입력" maxlength="6" style="text-align:center;letter-spacing:4px;font-size:24px;font-weight:700;">
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DATA =====
+const COLORS = ['#FF6B6B','#FF9F43','#FECA57','#48DBFB','#5B6AFF','#A29BFE','#FF6B9D','#4ECDC4','#2ECC71','#95A5A6'];
+const CATEGORY_EMOJI = { general:'📌', anniversary:'💍', birthday:'🎂', meeting:'⌚', travel:'✈️', work:'💼' };
+const CATEGORY_NAME = { general:'일반', anniversary:'기념일', birthday:'생일', meeting:'약속', travel:'여행', work:'업무' };
+const REPEAT_NAME = { none:'반복 없음', daily:'매일', weekly:'매주', monthly:'매월', yearly:'매년' };
+const ALARM_NAME = { none:'없음', on:'이벤트 시간', '5m':'5분 전', '15m':'15분 전', '30m':'30분 전', '1h':'1시간 전', '1d':'1일 전', '1w':'1주 전' };
+
+let currentUser = null;
+let calendars = [];
+let events = [];
+let notifications = [];
+let currentYear, currentMonth, selectedDate;
+let selectedCalIcon = '👨‍👩‍👧‍👦';
+let holidayCache = {}; // { 'YYYY-MM': { 'YYYY-MM-DD': '공휴일명', ... } }
+let holidayApiKey = localStorage.getItem('ourday_holiday_apikey') || '58bcd166bdfb5633040ac2a9182ad2e83017243055f6657af694eb711cb251e8';
+
+// ===== KOREAN HOLIDAYS =====
+// 고정 공휴일 (양력)
+const FIXED_HOLIDAYS = {
+  '01-01': '신정',
+  '03-01': '삼일절',
+  '05-05': '어린이날',
+  '06-06': '현충일',
+  '08-15': '광복절',
+  '10-03': '개천절',
+  '10-09': '한글날',
+  '12-25': '크리스마스',
+};
+
+// 음력 공휴일은 매년 날짜가 다르므로 API 또는 내장 데이터 사용
+// 2024~2027 주요 음력 공휴일 (설날, 추석, 부처님오신날) 내장
+const LUNAR_HOLIDAYS = {
+  '2024-02-09': '설날 연휴', '2024-02-10': '설날', '2024-02-11': '설날 연휴', '2024-02-12': '대체공휴일(설날)',
+  '2024-05-15': '부처님오신날',
+  '2024-09-16': '추석 연휴', '2024-09-17': '추석', '2024-09-18': '추석 연휴',
+  '2025-01-28': '설날 연휴', '2025-01-29': '설날', '2025-01-30': '설날 연휴',
+  '2025-05-05': '부처님오신날',
+  '2025-10-05': '추석 연휴', '2025-10-06': '추석', '2025-10-07': '추석 연휴', '2025-10-08': '대체공휴일(추석)',
+  '2026-02-16': '설날 연휴', '2026-02-17': '설날', '2026-02-18': '설날 연휴',
+  '2026-05-24': '부처님오신날',
+  '2026-09-24': '추석 연휴', '2026-09-25': '추석', '2026-09-26': '추석 연휴',
+  '2027-02-06': '설날 연휴', '2027-02-07': '설날', '2027-02-08': '설날 연휴', '2027-02-09': '대체공휴일(설날)',
+  '2027-05-13': '부처님오신날',
+  '2027-09-14': '추석 연휴', '2027-09-15': '추석', '2027-09-16': '추석 연휴',
+};
+
+function getBuiltinHoliday(dateStr) {
+  // 고정 양력 공휴일
+  const md = dateStr.slice(5); // 'MM-DD'
+  if (FIXED_HOLIDAYS[md]) return FIXED_HOLIDAYS[md];
+  // 내장 음력 공휴일
+  if (LUNAR_HOLIDAYS[dateStr]) return LUNAR_HOLIDAYS[dateStr];
+  return null;
+}
+
+function getHoliday(dateStr) {
+  // API에서 가져온 데이터 우선
+  const ym = dateStr.slice(0,7); // 'YYYY-MM'
+  if (holidayCache[ym] && holidayCache[ym][dateStr]) return holidayCache[ym][dateStr];
+  // 내장 데이터 fallback
+  return getBuiltinHoliday(dateStr);
+}
+
+async function fetchHolidaysForMonth(year, month) {
+  const ym = `${year}-${String(month+1).padStart(2,'0')}`;
+  if (holidayCache[ym]) return; // 이미 캐시됨
+
+  if (!holidayApiKey) {
+    // API 키 없으면 내장 데이터만 사용하되 캐시 표시
+    holidayCache[ym] = {};
+    return;
+  }
+
+  try {
+    const mm = String(month+1).padStart(2,'0');
+    const url = `https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo?serviceKey=${encodeURIComponent(holidayApiKey)}&solYear=${year}&solMonth=${mm}&_type=json&numOfRows=50`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const items = data?.response?.body?.items?.item;
+    holidayCache[ym] = {};
+    if (items) {
+      const list = Array.isArray(items) ? items : [items];
+      list.forEach(item => {
+        const locdate = String(item.locdate);
+        const dateKey = `${locdate.slice(0,4)}-${locdate.slice(4,6)}-${locdate.slice(6,8)}`;
+        holidayCache[ym][dateKey] = item.dateName;
+      });
+    }
+    // 캐시를 localStorage에 저장 (임시공휴일 포함)
+    localStorage.setItem('ourday_holiday_cache', JSON.stringify(holidayCache));
+    renderCalendar(); // 데이터 도착 후 다시 렌더
+  } catch (e) {
+    console.warn('공휴일 API 호출 실패:', e);
+    holidayCache[ym] = {};
+  }
+}
+
+function load() {
+  currentUser = JSON.parse(localStorage.getItem('ourday_user') || 'null');
+  calendars = JSON.parse(localStorage.getItem('ourday_calendars') || '[]');
+  events = JSON.parse(localStorage.getItem('ourday_events') || '[]');
+  notifications = JSON.parse(localStorage.getItem('ourday_notifs') || '[]');
+  holidayCache = JSON.parse(localStorage.getItem('ourday_holiday_cache') || '{}');
+  holidayApiKey = localStorage.getItem('ourday_holiday_apikey') || '';
+}
+function save() {
+  localStorage.setItem('ourday_user', JSON.stringify(currentUser));
+  localStorage.setItem('ourday_calendars', JSON.stringify(calendars));
+  localStorage.setItem('ourday_events', JSON.stringify(events));
+  localStorage.setItem('ourday_notifs', JSON.stringify(notifications));
+}
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function genInviteCode() { return Math.random().toString(36).slice(2,8).toUpperCase(); }
+
+// ===== ONBOARDING =====
+function completeOnboarding() {
+  const name = document.getElementById('onboard-name').value.trim();
+  if (!name) { showToast('닉네임을 입력해주세요'); return; }
+  currentUser = { id: genId(), name, color: COLORS[Math.floor(Math.random()*COLORS.length)] };
+  // Create default calendar
+  const cal = { id: genId(), name: '내 캘린더', icon: '📅', inviteCode: genInviteCode(), members: [{ id: currentUser.id, name: currentUser.name, color: currentUser.color }], createdAt: new Date().toISOString().slice(0,10) };
+  calendars.push(cal);
+  // Add sample events
+  const today = new Date();
+  const todayStr = fmt(today);
+  events.push(
+    { id:genId(), calendarId:cal.id, title:'Our Days 시작!', date:todayStr, endDate:'', startTime:null, endTime:null, isAllDay:true, repeat:'none', category:'general', color:'#5B6AFF', memo:'Our Days 앱을 시작했습니다!', alarm:'none', createdBy:currentUser.id, comments:[], createdAt:todayStr },
+    { id:genId(), calendarId:cal.id, title:'샘플 기념일', date:todayStr, endDate:'', startTime:null, endTime:null, isAllDay:true, repeat:'yearly', category:'anniversary', color:'#FF6B6B', memo:'매년 반복되는 기념일 샘플', alarm:'1d', createdBy:currentUser.id, comments:[], createdAt:todayStr }
+  );
+  addNotification('🎉', `${name}님, Our Days에 오신 것을 환영합니다!`);
+  save();
+  document.getElementById('onboarding').classList.add('hidden');
+  init();
+}
+
+// ===== INIT =====
+function init() {
+  const now = new Date();
+  currentYear = now.getFullYear();
+  currentMonth = now.getMonth();
+  selectedDate = fmt(now);
+  renderCalendar();
+  renderColorPicker();
+  renderCalendarSelect();
+  fetchHolidaysForMonth(currentYear, currentMonth);
+}
+
+function fmt(d) { const dd = d instanceof Date ? d : new Date(d); return dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0'); }
+function parseDate(s) { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+
+// ===== CALENDAR RENDER =====
+function renderCalendar() {
+  document.getElementById('month-title').textContent = `${currentYear}년 ${currentMonth+1}월`;
+  const grid = document.getElementById('calendar-grid');
+  grid.innerHTML = '';
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+  const prevDays = new Date(currentYear, currentMonth, 0).getDate();
+  const today = fmt(new Date());
+
+  // Previous month padding
+  for (let i = firstDay-1; i >= 0; i--) {
+    const d = prevDays - i;
+    const dateStr = fmt(new Date(currentYear, currentMonth-1, d));
+    grid.appendChild(makeDayCell(d, dateStr, true, new Date(currentYear, currentMonth-1, d).getDay()));
+  }
+  // Current month
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = fmt(new Date(currentYear, currentMonth, d));
+    const dow = new Date(currentYear, currentMonth, d).getDay();
+    const cell = makeDayCell(d, dateStr, false, dow);
+    if (dateStr === today) cell.classList.add('today');
+    if (dateStr === selectedDate) cell.classList.add('selected');
+    grid.appendChild(cell);
+  }
+  // Next month padding
+  const totalCells = grid.children.length;
+  const remaining = (7 - totalCells % 7) % 7;
+  for (let d = 1; d <= remaining; d++) {
+    const dateStr = fmt(new Date(currentYear, currentMonth+1, d));
+    grid.appendChild(makeDayCell(d, dateStr, true, new Date(currentYear, currentMonth+1, d).getDay()));
+  }
+  renderDayPanel();
+}
+
+function makeDayCell(d, dateStr, otherMonth, dow) {
+  const cell = document.createElement('div');
+  const holiday = getHoliday(dateStr);
+  cell.className = 'cal-day' + (otherMonth ? ' other-month' : '') + (dow===0?' sunday':'') + (dow===6?' saturday':'') + (holiday?' holiday':'');
+  cell.innerHTML = `<div class="day-num">${d}</div>`;
+  // Holiday name
+  if (holiday && !otherMonth) {
+    const hLabel = document.createElement('div');
+    hLabel.className = 'holiday-name';
+    hLabel.textContent = holiday;
+    cell.appendChild(hLabel);
+  }
+  // Event dots
+  const dayEvents = getEventsForDate(dateStr);
+  if (dayEvents.length > 0) {
+    const dots = document.createElement('div');
+    dots.className = 'dots';
+    const shown = dayEvents.slice(0,3);
+    shown.forEach(e => { const dot = document.createElement('div'); dot.className='dot'; dot.style.background=e.color; dots.appendChild(dot); });
+    cell.appendChild(dots);
+  }
+  cell.onclick = () => { selectedDate = dateStr; renderCalendar(); };
+  return cell;
+}
+
+function getEventsForDate(dateStr) {
+  return events.filter(e => {
+    if (e.date === dateStr) return true;
+    // Check end date range
+    if (e.endDate && dateStr > e.date && dateStr <= e.endDate) return true;
+    // Check repeats
+    if (e.repeat !== 'none') {
+      const evtDate = parseDate(e.date);
+      const checkDate = parseDate(dateStr);
+      if (checkDate < evtDate) return false;
+      if (e.repeat === 'yearly' && evtDate.getMonth()===checkDate.getMonth() && evtDate.getDate()===checkDate.getDate()) return true;
+      if (e.repeat === 'monthly' && evtDate.getDate()===checkDate.getDate()) return true;
+      if (e.repeat === 'weekly') { const diff = Math.floor((checkDate-evtDate)/(86400000)); if (diff % 7 === 0) return true; }
+      if (e.repeat === 'daily') return true;
+    }
+    return false;
+  });
+}
+
+function getDday(dateStr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = parseDate(dateStr);
+  const diff = Math.floor((target - today) / 86400000);
+  if (diff === 0) return 'D-Day';
+  if (diff > 0) return `D-${diff}`;
+  return `D+${Math.abs(diff)}`;
+}
+
+function getNextAnniversary(dateStr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const orig = parseDate(dateStr);
+  let next = new Date(today.getFullYear(), orig.getMonth(), orig.getDate());
+  if (next < today) next.setFullYear(next.getFullYear()+1);
+  return fmt(next);
+}
+
+function renderDayPanel() {
+  const panel = document.getElementById('day-panel');
+  const d = parseDate(selectedDate);
+  const dayNames = ['일','월','화','수','목','금','토'];
+  const dayEvents = getEventsForDate(selectedDate);
+  const holiday = getHoliday(selectedDate);
+  let html = `<div class="day-panel-header">${d.getMonth()+1}월 ${d.getDate()}일 (${dayNames[d.getDay()]})${holiday ? ` <span style="color:var(--danger);font-size:14px;"> · ${holiday}</span>` : ''}</div>`;
+  if (holiday) {
+    html += `<div class="event-card" style="border-left:4px solid var(--danger);">
+      <div class="event-color-bar" style="background:var(--danger)"></div>
+      <div class="event-info">
+        <div class="event-title" style="color:var(--danger);">🇰🇷 ${holiday}</div>
+        <div class="event-meta">공휴일 · 종일</div>
+      </div>
+    </div>`;
+  }
+  if (dayEvents.length === 0 && !holiday) {
+    html += `<div class="no-events">일정이 없습니다</div>`;
+  } else {
+    dayEvents.forEach(e => {
+      const dday = (e.repeat==='yearly' || e.category==='anniversary' || e.category==='birthday') ? getDday(getNextAnniversary(e.date)) : '';
+      const time = e.isAllDay ? '종일' : `${e.startTime||''} ~ ${e.endTime||''}`;
+      const creator = getMemberName(e.createdBy);
+      html += `<div class="event-card" onclick="showEventDetail('${e.id}')">
+        <div class="event-color-bar" style="background:${e.color}"></div>
+        <div class="event-info">
+          <div class="event-title">${CATEGORY_EMOJI[e.category]||''} ${e.title}</div>
+          <div class="event-meta">${time} · ${creator}</div>
+        </div>
+        ${dday ? `<div class="event-dday">${dday}</div>` : ''}
+      </div>`;
+    });
+  }
+  panel.innerHTML = html;
+}
+
+function getMemberName(userId) {
+  for (const cal of calendars) {
+    const m = cal.members.find(m => m.id === userId);
+    if (m) return m.name;
+  }
+  return '알 수 없음';
+}
+
+// ===== MONTH NAV =====
+function changeMonth(delta) {
+  currentMonth += delta;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  renderCalendar();
+  fetchHolidaysForMonth(currentYear, currentMonth);
+}
+
+// ===== VIEW SWITCH =====
+function switchView(viewId) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(viewId).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view===viewId));
+  if (viewId === 'view-events') renderEventList();
+  if (viewId === 'view-notif') renderNotifications();
+  if (viewId === 'view-settings') renderSettings();
+  document.getElementById('fab-btn').style.display = (viewId==='view-calendar'||viewId==='view-events') ? 'flex' : 'none';
+}
+
+// ===== EVENT LIST =====
+function renderEventList() {
+  const list = document.getElementById('event-list');
+  const upcoming = events.filter(e => e.date >= fmt(new Date()) || e.repeat !== 'none')
+    .sort((a,b) => a.date.localeCompare(b.date));
+  if (upcoming.length === 0) {
+    list.innerHTML = '<div class="no-events">예정된 일정이 없습니다</div>';
+    return;
+  }
+  let html = '<h3 style="font-size:18px;font-weight:700;margin-bottom:16px;">다가오는 일정</h3>';
+  let lastDate = '';
+  upcoming.forEach(e => {
+    if (e.date !== lastDate) {
+      const d = parseDate(e.date);
+      const dayNames = ['일','월','화','수','목','금','토'];
+      html += `<div class="event-list-date-header">${d.getMonth()+1}월 ${d.getDate()}일 (${dayNames[d.getDay()]})</div>`;
+      lastDate = e.date;
+    }
+    const calName = calendars.find(c=>c.id===e.calendarId)?.name || '';
+    const dday = (e.repeat==='yearly'||e.category==='anniversary'||e.category==='birthday') ? getDday(getNextAnniversary(e.date)) : '';
+    html += `<div class="event-card" onclick="showEventDetail('${e.id}')">
+      <div class="event-color-bar" style="background:${e.color}"></div>
+      <div class="event-info">
+        <div class="event-title">${CATEGORY_EMOJI[e.category]||''} ${e.title}</div>
+        <div class="event-meta">${e.isAllDay?'종일':e.startTime||''} · ${calName}</div>
+      </div>
+      ${dday ? `<div class="event-dday">${dday}</div>` : ''}
+    </div>`;
+  });
+  list.innerHTML = html;
+}
+
+// ===== NOTIFICATIONS =====
+function renderNotifications() {
+  const list = document.getElementById('notif-list');
+  if (notifications.length === 0) {
+    list.innerHTML = '<div class="no-events">알림이 없습니다</div>';
+    return;
+  }
+  list.innerHTML = notifications.map(n => `
+    <div class="notif-item">
+      <div class="notif-icon">${n.icon}</div>
+      <div class="notif-content">
+        <div class="notif-text">${n.text}</div>
+        <div class="notif-time">${n.time}</div>
+      </div>
+    </div>
+  `).reverse().join('');
+}
+
+function addNotification(icon, text) {
+  notifications.push({ icon, text, time: new Date().toLocaleString('ko-KR') });
+  save();
+}
+
+// ===== SETTINGS =====
+function renderSettings() {
+  const content = document.getElementById('settings-content');
+  content.innerHTML = `
+    <div class="settings-section">
+      <div class="settings-section-title">프로필</div>
+      <div class="settings-item">
+        <div class="settings-item-left">
+          <span class="settings-item-icon">👤</span>
+          <span class="settings-item-label">닉네임</span>
+        </div>
+        <span class="settings-item-value">${currentUser?.name||''}</span>
+      </div>
+      <div class="settings-item" onclick="changeUserColor()">
+        <div class="settings-item-left">
+          <span class="settings-item-icon">🎨</span>
+          <span class="settings-item-label">내 색상</span>
+        </div>
+        <span style="width:20px;height:20px;border-radius:50%;background:${currentUser?.color||'#ccc'};display:inline-block;"></span>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">캘린더</div>
+      ${calendars.map(c => `
+        <div class="settings-item">
+          <div class="settings-item-left">
+            <span class="settings-item-icon">${c.icon}</span>
+            <span class="settings-item-label">${c.name}</span>
+          </div>
+          <span class="settings-item-value">${c.members.length}명</span>
+        </div>
+      `).join('')}
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">공휴일 API (공공데이터포털)</div>
+      <div class="settings-item" style="flex-direction:column;align-items:stretch;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="settings-item-icon">🇰🇷</span>
+          <span class="settings-item-label">공휴일 API 키</span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" class="form-input" id="holiday-api-key" placeholder="data.go.kr API 키 입력" value="${holidayApiKey}" style="flex:1;font-size:12px;padding:8px 10px;">
+          <button class="modal-save" onclick="saveHolidayApiKey()" style="white-space:nowrap;">저장</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-sub);line-height:1.4;">
+          ${holidayApiKey ? '✅ API 키 설정됨 — 임시공휴일 자동 반영' : '⚠️ API 키 없음 — 기본 공휴일만 표시'}<br>
+          data.go.kr → "특일 정보" API 발급 (무료)
+        </div>
+      </div>
+      <div class="settings-item" onclick="clearHolidayCache()">
+        <div class="settings-item-left">
+          <span class="settings-item-icon">🔄</span>
+          <span class="settings-item-label">공휴일 캐시 초기화</span>
+        </div>
+        <span class="settings-item-value">새로고침</span>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">앱 정보</div>
+      <div class="settings-item">
+        <div class="settings-item-left">
+          <span class="settings-item-icon">ℹ️</span>
+          <span class="settings-item-label">버전</span>
+        </div>
+        <span class="settings-item-value">1.0.0 Demo</span>
+      </div>
+    </div>
+  `;
+}
+
+function saveHolidayApiKey() {
+  const key = document.getElementById('holiday-api-key').value.trim();
+  holidayApiKey = key;
+  localStorage.setItem('ourday_holiday_apikey', key);
+  // 캐시 초기화 후 다시 fetch
+  holidayCache = {};
+  localStorage.removeItem('ourday_holiday_cache');
+  fetchHolidaysForMonth(currentYear, currentMonth);
+  renderSettings();
+  showToast(key ? 'API 키가 저장되었습니다. 임시공휴일이 자동 반영됩니다.' : 'API 키가 제거되었습니다.');
+}
+
+function clearHolidayCache() {
+  holidayCache = {};
+  localStorage.removeItem('ourday_holiday_cache');
+  fetchHolidaysForMonth(currentYear, currentMonth);
+  showToast('공휴일 캐시가 초기화되었습니다');
+}
+
+function changeUserColor() {
+  const idx = COLORS.indexOf(currentUser.color);
+  currentUser.color = COLORS[(idx+1)%COLORS.length];
+  calendars.forEach(c => { const m = c.members.find(m=>m.id===currentUser.id); if(m) m.color=currentUser.color; });
+  save();
+  renderSettings();
+  showToast('색상이 변경되었습니다');
+}
+
+// ===== EVENT MODAL =====
+function renderColorPicker() {
+  const picker = document.getElementById('color-picker');
+  picker.innerHTML = COLORS.map((c,i) => `<div class="color-option${i===0?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectColor(this)"></div>`).join('');
+}
+
+function selectColor(el) {
+  document.querySelectorAll('#color-picker .color-option').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function selectIcon(el) {
+  el.parentElement.querySelectorAll('.color-option').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCalIcon = el.dataset.icon;
+}
+
+function renderCalendarSelect() {
+  const sel = document.getElementById('evt-calendar');
+  sel.innerHTML = calendars.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+}
+
+function toggleAllday() {
+  const btn = document.getElementById('evt-allday');
+  btn.classList.toggle('on');
+  document.getElementById('time-fields').style.display = btn.classList.contains('on') ? 'none' : 'block';
+}
+
+function openEventModal(editId) {
+  const modal = document.getElementById('event-modal');
+  document.getElementById('modal-title').textContent = editId ? '이벤트 수정' : '새 이벤트';
+  document.getElementById('evt-edit-id').value = editId || '';
+  if (editId) {
+    const e = events.find(ev => ev.id === editId);
+    if (!e) return;
+    document.getElementById('evt-title').value = e.title;
+    document.getElementById('evt-date').value = e.date;
+    document.getElementById('evt-end-date').value = e.endDate || '';
+    document.getElementById('evt-repeat').value = e.repeat;
+    document.getElementById('evt-category').value = e.category;
+    document.getElementById('evt-alarm').value = e.alarm;
+    document.getElementById('evt-memo').value = e.memo;
+    document.getElementById('evt-calendar').value = e.calendarId;
+    const allday = document.getElementById('evt-allday');
+    if (e.isAllDay) { allday.classList.add('on'); document.getElementById('time-fields').style.display='none'; }
+    else { allday.classList.remove('on'); document.getElementById('time-fields').style.display='block'; document.getElementById('evt-start-time').value=e.startTime||'09:00'; document.getElementById('evt-end-time').value=e.endTime||'10:00'; }
+    document.querySelectorAll('#color-picker .color-option').forEach(el => el.classList.toggle('selected', el.dataset.color===e.color));
+  } else {
+    document.getElementById('evt-title').value = '';
+    document.getElementById('evt-date').value = selectedDate;
+    document.getElementById('evt-end-date').value = selectedDate;
+    document.getElementById('evt-repeat').value = 'none';
+    document.getElementById('evt-category').value = 'general';
+    document.getElementById('evt-alarm').value = '1d';
+    document.getElementById('evt-memo').value = '';
+    document.getElementById('evt-allday').classList.remove('on');
+    document.getElementById('time-fields').style.display = 'block';
+    renderColorPicker();
+    renderCalendarSelect();
+  }
+  modal.classList.add('show');
+}
+
+function saveEvent() {
+  const title = document.getElementById('evt-title').value.trim();
+  if (!title) { showToast('제목을 입력해주세요'); return; }
+  const date = document.getElementById('evt-date').value;
+  if (!date) { showToast('날짜를 선택해주세요'); return; }
+  const isAllDay = document.getElementById('evt-allday').classList.contains('on');
+  const color = document.querySelector('#color-picker .color-option.selected')?.dataset.color || COLORS[0];
+  const editId = document.getElementById('evt-edit-id').value;
+
+  const eventData = {
+    id: editId || genId(),
+    calendarId: document.getElementById('evt-calendar').value,
+    title,
+    date,
+    endDate: document.getElementById('evt-end-date').value || '',
+    startTime: isAllDay ? null : document.getElementById('evt-start-time').value,
+    endTime: isAllDay ? null : document.getElementById('evt-end-time').value,
+    isAllDay,
+    repeat: document.getElementById('evt-repeat').value,
+    category: document.getElementById('evt-category').value,
+    color,
+    memo: document.getElementById('evt-memo').value,
+    alarm: document.getElementById('evt-alarm').value,
+    createdBy: currentUser.id,
+    comments: editId ? (events.find(e=>e.id===editId)?.comments||[]) : [],
+    createdAt: editId ? (events.find(e=>e.id===editId)?.createdAt||fmt(new Date())) : fmt(new Date())
+  };
+
+  if (editId) {
+    const idx = events.findIndex(e => e.id === editId);
+    events[idx] = eventData;
+    addNotification('✏️', `"${title}" 일정이 수정되었습니다`);
+  } else {
+    events.push(eventData);
+    addNotification('📅', `"${title}" 일정이 추가되었습니다`);
+  }
+  save();
+  closeModal('event-modal');
+  renderCalendar();
+  showToast(editId ? '수정되었습니다' : '저장되었습니다');
+}
+
+// ===== EVENT DETAIL =====
+function showEventDetail(id) {
+  const e = events.find(ev => ev.id === id);
+  if (!e) return;
+  const cal = calendars.find(c => c.id === e.calendarId);
+  const creator = getMemberName(e.createdBy);
+  const creatorColor = cal?.members.find(m=>m.id===e.createdBy)?.color || '#ccc';
+  const dday = (e.repeat==='yearly'||e.category==='anniversary'||e.category==='birthday') ? getDday(getNextAnniversary(e.date)) : getDday(e.date);
+  const d = parseDate(e.date);
+  const dayNames = ['일','월','화','수','목','금','토'];
+
+  let commentsHtml = e.comments.map(c => {
+    const mColor = cal?.members.find(m=>m.id===c.userId)?.color || '#ccc';
+    return `<div class="comment-item">
+      <div class="comment-avatar" style="background:${mColor}">${c.name[0]}</div>
+      <div class="comment-body">
+        <div class="comment-name">${c.name}</div>
+        <div class="comment-text">${c.text}</div>
+        <div class="comment-time">${c.time}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="modal-header">
+      <h3>이벤트 상세</h3>
+      <button class="modal-close" onclick="closeModal('detail-modal')">✕</button>
+    </div>
+    <div class="event-detail-header">
+      <div class="event-detail-emoji">${CATEGORY_EMOJI[e.category]||'📌'}</div>
+      <div class="event-detail-title">${e.title}</div>
+      <div class="event-detail-dday">${dday}</div>
+    </div>
+    <div class="event-detail-info">
+      <div class="event-detail-row"><span class="icon">📅</span>${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${dayNames[d.getDay()]})</div>
+      <div class="event-detail-row"><span class="icon">🕐</span>${e.isAllDay?'종일':((e.startTime||'')+'~'+(e.endTime||''))}</div>
+      <div class="event-detail-row"><span class="icon">🔄</span>${REPEAT_NAME[e.repeat]}</div>
+      <div class="event-detail-row"><span class="icon">📁</span>${CATEGORY_NAME[e.category]}</div>
+      <div class="event-detail-row"><span class="icon">🔔</span>${ALARM_NAME[e.alarm]}</div>
+      <div class="event-detail-row"><span class="icon">📅</span>${cal?.icon||''} ${cal?.name||''}</div>
+      ${e.memo ? `<div class="event-detail-row"><span class="icon">📝</span>${e.memo}</div>` : ''}
+      <div class="event-detail-row"><span class="icon" style="background:${creatorColor};width:18px;height:18px;border-radius:50%;"></span>${creator}님이 생성</div>
+    </div>
+    <div class="event-detail-actions">
+      <button class="btn-edit" onclick="closeModal('detail-modal');openEventModal('${e.id}')">✏️ 수정</button>
+      <button class="btn-delete" onclick="deleteEvent('${e.id}')">🗑️ 삭제</button>
+    </div>
+    <div class="comments-section">
+      <div class="comments-title">💬 댓글 (${e.comments.length})</div>
+      ${commentsHtml}
+      <div class="comment-input-wrap">
+        <input type="text" id="comment-input" placeholder="댓글을 입력하세요" onkeydown="if(event.key==='Enter')addComment('${e.id}')">
+        <button onclick="addComment('${e.id}')">↑</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('detail-modal').classList.add('show');
+}
+
+function addComment(eventId) {
+  const input = document.getElementById('comment-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const e = events.find(ev => ev.id === eventId);
+  if (!e) return;
+  e.comments.push({ userId: currentUser.id, name: currentUser.name, text, time: new Date().toLocaleString('ko-KR') });
+  save();
+  showEventDetail(eventId);
+  addNotification('💬', `${currentUser.name}님이 "${e.title}"에 댓글을 남겼습니다`);
+}
+
+function deleteEvent(id) {
+  const e = events.find(ev => ev.id === id);
+  if (!e) return;
+  if (!confirm(`"${e.title}" 일정을 삭제하시겠습니까?`)) return;
+  events = events.filter(ev => ev.id !== id);
+  addNotification('🗑️', `"${e.title}" 일정이 삭제되었습니다`);
+  save();
+  closeModal('detail-modal');
+  renderCalendar();
+  showToast('삭제되었습니다');
+}
+
+// ===== CALENDAR MANAGEMENT =====
+function showCalendarMgmt() {
+  const content = document.getElementById('cal-mgmt-content');
+  content.innerHTML = `
+    <div class="modal-header">
+      <h3>캘린더 관리</h3>
+      <button class="modal-close" onclick="closeModal('cal-mgmt-modal')">✕</button>
+    </div>
+    <div class="calendar-mgmt">
+      ${calendars.map(c => `
+        <div class="cal-group">
+          <div class="cal-group-header">
+            <span class="cal-group-name">${c.icon} ${c.name}</span>
+            <span class="cal-group-count">${c.members.length}명</span>
+          </div>
+          <div class="cal-invite-code">초대 코드: <span>${c.inviteCode}</span>
+            <button style="background:none;border:none;cursor:pointer;font-size:14px;margin-left:4px;" onclick="copyCode('${c.inviteCode}')">📋</button>
+          </div>
+          <div class="cal-members">
+            ${c.members.map(m => `<div class="cal-member"><div class="cal-member-dot" style="background:${m.color}"></div>${m.name}</div>`).join('')}
+          </div>
+        </div>
+      `).join('')}
+      <div class="cal-mgmt-actions">
+        <button onclick="closeModal('cal-mgmt-modal');document.getElementById('new-cal-modal').classList.add('show')">+ 새 캘린더</button>
+        <button onclick="closeModal('cal-mgmt-modal');document.getElementById('join-cal-modal').classList.add('show')">🔗 참여하기</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('cal-mgmt-modal').classList.add('show');
+}
+
+function copyCode(code) {
+  navigator.clipboard?.writeText(code).then(() => showToast('초대 코드가 복사되었습니다'));
+}
+
+function createCalendar() {
+  const name = document.getElementById('new-cal-name').value.trim();
+  if (!name) { showToast('캘린더 이름을 입력해주세요'); return; }
+  const cal = { id: genId(), name, icon: selectedCalIcon, inviteCode: genInviteCode(), members: [{ id: currentUser.id, name: currentUser.name, color: currentUser.color }], createdAt: fmt(new Date()) };
+  calendars.push(cal);
+  addNotification('📅', `"${name}" 캘린더가 생성되었습니다`);
+  save();
+  closeModal('new-cal-modal');
+  renderCalendarSelect();
+  showToast('캘린더가 생성되었습니다');
+}
+
+function joinCalendar() {
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  if (code.length !== 6) { showToast('6자리 초대 코드를 입력해주세요'); return; }
+  const cal = calendars.find(c => c.inviteCode === code);
+  if (!cal) {
+    // Demo: create a simulated shared calendar
+    const demoCal = { id: genId(), name: '공유 달력', icon: '👥', inviteCode: code, members: [
+      { id: 'demo1', name: '멤버1', color: '#4ECDC4' },
+      { id: currentUser.id, name: currentUser.name, color: currentUser.color }
+    ], createdAt: fmt(new Date()) };
+    calendars.push(demoCal);
+    addNotification('🎉', `"공유 달력"에 참여했습니다! (데모)`);
+    save();
+    closeModal('join-cal-modal');
+    renderCalendarSelect();
+    showToast('캘린더에 참여했습니다 (데모)');
+    return;
+  }
+  if (cal.members.find(m => m.id === currentUser.id)) { showToast('이미 참여중인 캘린더입니다'); return; }
+  cal.members.push({ id: currentUser.id, name: currentUser.name, color: currentUser.color });
+  addNotification('🎉', `"${cal.name}"에 참여했습니다`);
+  save();
+  closeModal('join-cal-modal');
+  renderCalendarSelect();
+  showToast(`"${cal.name}"에 참여했습니다`);
+}
+
+// ===== MODAL =====
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('show'); });
+});
+
+// ===== TOAST =====
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ===== SWIPE =====
+let touchStartX = 0;
+document.getElementById('calendar-grid').addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+document.getElementById('calendar-grid').addEventListener('touchend', e => {
+  const diff = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(diff) > 60) { changeMonth(diff > 0 ? -1 : 1); }
+});
+
+// ===== BOOT =====
+load();
+if (currentUser) {
+  document.getElementById('onboarding').classList.add('hidden');
+  init();
+}
+</script>
+</body>
+</html>
