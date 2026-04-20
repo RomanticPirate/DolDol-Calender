@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>메모리 누수 테스트</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:monospace;background:#1a1a2e;color:#e0e0e0;padding:20px;font-size:13px}
+h1{color:#5B6AFF;margin-bottom:10px;font-size:20px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+.stat{background:#2a2a4a;padding:10px;border-radius:8px;text-align:center}
+.stat .num{font-size:18px;font-weight:700;color:#5B6AFF}
+.stat .label{font-size:10px;color:#888;margin-top:4px}
+#log{background:#0d0d1a;border-radius:8px;padding:12px;height:60vh;overflow-y:auto;white-space:pre-wrap;line-height:1.6;font-size:11px}
+.ok{color:#4ECDC4}.err{color:#FF6B6B}.warn{color:#FECA57}.info{color:#74B9FF}.memory{color:#FF9F43}
+button{background:#5B6AFF;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin:8px 4px}
+button:disabled{opacity:0.4}
+</style>
+</head>
+<body>
+<h1>🧠 메모리 누수 테스트 (3명 × 3년 × 1000일정)</h1>
+<div>
+<button onclick="runTest()" id="btn-run">테스트 시작</button>
+<button onclick="forceGC()">강제 GC 시도</button>
+</div>
+<div class="stats">
+<div class="stat"><div class="num" id="s-evts">0</div><div class="label">EVTS 배열</div></div>
+<div class="stat"><div class="num" id="s-deleted">0</div><div class="label">deletedIds</div></div>
+<div class="stat"><div class="num" id="s-dellog">0</div><div class="label">DEL_LOG</div></div>
+<div class="stat"><div class="num" id="s-mem">0</div><div class="label">힙 메모리(MB)</div></div>
+</div>
+<div id="log"></div>
+
+<script>
+const logEl=document.getElementById('log');
+function log(msg,cls='info'){
+  const t=new Date().toLocaleTimeString();
+  logEl.innerHTML+=`<span class="${cls}">[${t}] ${msg}</span>\n`;
+  logEl.scrollTop=logEl.scrollHeight;
+}
+function getMem(){
+  if(performance.memory)return Math.round(performance.memory.usedJSHeapSize/1024/1024*100)/100;
+  return 0;
+}
+function updateStats(){
+  document.getElementById('s-evts').textContent=EVTS.length;
+  document.getElementById('s-deleted').textContent=getDeletedIds().size;
+  document.getElementById('s-dellog').textContent=DEL_LOG.length;
+  document.getElementById('s-mem').textContent=getMem();
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+function forceGC(){
+  if(window.gc){window.gc();log('GC 실행됨','warn')}
+  else log('Chrome --js-flags="--expose-gc" 옵션이 필요합니다','warn');
+  updateStats();
+}
+
+// === 시뮬레이션할 sync 엔진 (실제 코드와 동일) ===
+let EVTS=[],CATS=[],DEL_LOG=[],NOTIFS=[];
+let pendingUploads=new Set();
+let syncedRemoteIds=null;
+let firstSyncDone=false;
+let mockRemote=new Map(); // Firestore 시뮬레이션
+const CAL={id:'cal1',fsId:'fs1',members:[
+  {id:'u1',name:'유저1',color:'#FF6B6B'},
+  {id:'u2',name:'유저2',color:'#48DBFB'},
+  {id:'u3',name:'유저3',color:'#4ECDC4'}
+]};
+
+function getDeletedIds(){try{return new Set(JSON.parse(localStorage.getItem('mem_deleted_ids')||'[]'))}catch(e){return new Set()}}
+function addDeletedId(id){const s=getDeletedIds();s.add(id);localStorage.setItem('mem_deleted_ids',JSON.stringify([...s].slice(-200)))}
+function toMs(t){if(!t)return 0;return new Date(t).getTime()||0}
+function gid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+
+// === 핵심 sync 함수 (실제 코드와 동일) ===
+function processSnapshot(remoteList){
+  const remote=remoteList;
+  const deletedIds=getDeletedIds();
+  const merged=[];
+  const remoteMap=new Map(remote.map(e=>[e.id,e]));
+  const localMap=new Map(EVTS.map(e=>[e.id,e]));
+  const prevRemoteIds=syncedRemoteIds;
+  let needUpload=[];
+
+  remote.forEach(re=>{
+    if(re.deleted)return;
+    if(deletedIds.has(re.id))return;
+    const local=localMap.get(re.id);
+    if(!local){merged.push(re)}
+    else{
+      const rt=toMs(re.updatedAt);
+      const lt=toMs(local.updatedAt);
+      const winner=rt>=lt?{...re}:{...local};
+      const rC=Array.isArray(re.comments)?re.comments:[];
+      const lC=Array.isArray(local.comments)?local.comments:[];
+      if(rC.length||lC.length){
+        const all=[...rC];let added=false;
+        lC.forEach(lc=>{
+          if(!all.find(rc=>rc.time===lc.time&&rc.userId===lc.userId&&rc.text===lc.text)){
+            all.push(lc);added=true;
+          }
+        });
+        winner.comments=all.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+        if(added)needUpload.push(winner);
+      }
+      merged.push(winner);
+    }
+  });
+
+  EVTS.forEach(le=>{
+    if(remoteMap.has(le.id))return;
+    if(deletedIds.has(le.id))return;
+    if(firstSyncDone&&prevRemoteIds&&prevRemoteIds.has(le.id)){
+      addDeletedId(le.id);return;
+    }
+    if(pendingUploads.has(le.id)){merged.push(le);return}
+    if(le._uploaded){addDeletedId(le.id);return}
+    merged.push(le);needUpload.push(le);
+  });
+
+  EVTS=merged;
+  EVTS.forEach(e=>{if(remoteMap.has(e.id))e._uploaded=true});
+  syncedRemoteIds=new Set(remote.map(e=>e.id));
+  firstSyncDone=true;
+}
+
+function addEvent(userId,month,year,evtNum){
+  const id=gid();
+  const evt={
+    id,calendarId:'fs1',
+    title:`사용자${userId} ${year}년${month}월 일정${evtNum}`,
+    date:`${year}-${String(month).padStart(2,'0')}-${String((evtNum%28)+1).padStart(2,'0')}`,
+    endDate:`${year}-${String(month).padStart(2,'0')}-${String((evtNum%28)+1).padStart(2,'0')}`,
+    startTime:'09:00',endTime:'10:00',
+    isAllDay:false,repeat:'none',color:'#FF6B6B',catIcon:'⌚',
+    memo:`메모 내용 ${evtNum}`,
+    targets:['all'],
+    alarms:['1h'],
+    customAlarms:[],
+    createdBy:`u${userId}`,
+    comments:[],
+    createdAt:`${year}-${String(month).padStart(2,'0')}-01`,
+    updatedAt:new Date().toISOString()
+  };
+  EVTS.push(evt);
+  pendingUploads.add(id);
+  // 시뮬레이션: 90% 확률로 즉시 Firestore 업로드 성공
+  if(Math.random()<0.9){
+    mockRemote.set(id,{...evt,updatedAt:new Date().toISOString()});
+    pendingUploads.delete(id);
+    evt._uploaded=true;
+  }
+  return id;
+}
+
+async function runTest(){
+  document.getElementById('btn-run').disabled=true;
+  log('========== 메모리 누수 테스트 시작 ==========','ok');
+  const memStart=getMem();
+  log(`시작 시 힙 메모리: ${memStart} MB`,'memory');
+
+  // localStorage 초기화
+  localStorage.removeItem('mem_deleted_ids');
+  EVTS=[];CATS=[];DEL_LOG=[];NOTIFS=[];
+  pendingUploads.clear();syncedRemoteIds=null;firstSyncDone=false;
+  mockRemote.clear();
+
+  const memSnapshots=[];
+  let totalAdded=0,totalEdited=0,totalDeleted=0,totalSnapshots=0;
+
+  // 3년 × 12개월 × 3명 × ~28일정 = 약 3024 일정
+  for(let year=2026;year<=2028;year++){
+    for(let month=1;month<=12;month++){
+      // 매월 각자 ~28개씩 추가 (3명 × 28개 = 84개)
+      for(let user=1;user<=3;user++){
+        for(let ev=1;ev<=28;ev++){
+          addEvent(user,month,year,ev);
+          totalAdded++;
+        }
+      }
+      // 매월 onSnapshot 시뮬레이션 (병합 로직 실행)
+      processSnapshot([...mockRemote.values()]);
+      totalSnapshots++;
+
+      // 매월 일부 일정 수정 (10건)
+      for(let i=0;i<10;i++){
+        const idx=Math.floor(Math.random()*EVTS.length);
+        if(EVTS[idx]){
+          EVTS[idx].title+='_수정';
+          EVTS[idx].updatedAt=new Date().toISOString();
+          totalEdited++;
+          // remote에도 반영
+          if(mockRemote.has(EVTS[idx].id)){
+            mockRemote.set(EVTS[idx].id,{...EVTS[idx]});
+          }
+        }
+      }
+
+      // 매월 일부 삭제 (5건)
+      for(let i=0;i<5;i++){
+        if(EVTS.length>10){
+          const idx=Math.floor(Math.random()*EVTS.length);
+          const evt=EVTS[idx];
+          DEL_LOG.push({eventId:evt.id,deletedBy:'u1',deletedAt:new Date().toISOString(),snapshot:{...evt}});
+          addDeletedId(evt.id);
+          EVTS.splice(idx,1);
+          mockRemote.delete(evt.id);
+          totalDeleted++;
+        }
+      }
+
+      // 매월 댓글 추가 시뮬레이션 (20건)
+      for(let i=0;i<20;i++){
+        if(EVTS.length>0){
+          const idx=Math.floor(Math.random()*EVTS.length);
+          if(EVTS[idx]){
+            EVTS[idx].comments.push({
+              userId:`u${(i%3)+1}`,name:`유저${(i%3)+1}`,
+              text:`댓글 ${year}-${month}-${i}`,
+              time:new Date().toLocaleString('ko-KR')
+            });
+            EVTS[idx].updatedAt=new Date().toISOString();
+            if(mockRemote.has(EVTS[idx].id)){
+              mockRemote.set(EVTS[idx].id,{...EVTS[idx]});
+            }
+          }
+        }
+      }
+
+      // 매월 추가 onSnapshot (수정/삭제/댓글 반영)
+      processSnapshot([...mockRemote.values()]);
+      totalSnapshots++;
+    }
+    const mem=getMem();
+    memSnapshots.push({year,mem,evts:EVTS.length,dellog:DEL_LOG.length});
+    log(`${year}년 완료 — EVTS: ${EVTS.length}, DEL_LOG: ${DEL_LOG.length}, 메모리: ${mem} MB`,'info');
+    updateStats();
+    await sleep(50); // GC 기회
+  }
+
+  const memEnd=getMem();
+  log('','info');
+  log('========== 결과 ==========','ok');
+  log(`총 추가: ${totalAdded}`,'info');
+  log(`총 수정: ${totalEdited}`,'info');
+  log(`총 삭제: ${totalDeleted}`,'info');
+  log(`총 onSnapshot: ${totalSnapshots}`,'info');
+  log(`최종 EVTS: ${EVTS.length}`,'info');
+  log(`최종 DEL_LOG: ${DEL_LOG.length}`,'info');
+  log(`최종 deletedIds: ${getDeletedIds().size} (200개 제한)`,'info');
+  log(`최종 pendingUploads: ${pendingUploads.size}`,'info');
+  log(`최종 mockRemote: ${mockRemote.size}`,'info');
+  log('','info');
+  log(`시작 메모리: ${memStart} MB`,'memory');
+  log(`종료 메모리: ${memEnd} MB`,'memory');
+  log(`증가량: ${(memEnd-memStart).toFixed(2)} MB`,'memory');
+
+  // 메모리 분석
+  const expectedMB=EVTS.length*0.001; // 일정당 약 1KB
+  const expectedDelLogMB=DEL_LOG.length*0.001;
+  log('','info');
+  log(`예상 메모리 사용 (EVTS): ~${expectedMB.toFixed(2)} MB`,'memory');
+  log(`예상 메모리 사용 (DEL_LOG): ~${expectedDelLogMB.toFixed(2)} MB`,'memory');
+  log(`예상 총: ~${(expectedMB+expectedDelLogMB).toFixed(2)} MB`,'memory');
+
+  // 누수 판정
+  const totalExpected=expectedMB+expectedDelLogMB+5; // +5MB 여유
+  const actualGrowth=memEnd-memStart;
+  if(actualGrowth>totalExpected*3){
+    log(`⚠️ 메모리 누수 의심! (예상 ${totalExpected.toFixed(2)} MB vs 실제 ${actualGrowth.toFixed(2)} MB)`,'err');
+  }else if(actualGrowth>totalExpected*1.5){
+    log(`⚠️ 메모리 사용량이 예상보다 많음 (예상 ${totalExpected.toFixed(2)} MB vs 실제 ${actualGrowth.toFixed(2)} MB)`,'warn');
+  }else{
+    log(`✅ 메모리 사용량 정상 (예상 범위 내)`,'ok');
+  }
+
+  // DEL_LOG 무한 증가 체크 (이건 잠재적 문제!)
+  if(DEL_LOG.length>1000){
+    log(`❌ DEL_LOG가 ${DEL_LOG.length}개 — 캡 없이 무한 증가 중. 메모리 누수!`,'err');
+    log(`   해결책: DEL_LOG도 dd_deleted_ids처럼 200개로 제한 필요`,'err');
+  }
+
+  // 메모리 추세 분석
+  log('','info');
+  log('연도별 메모리 추세:','info');
+  memSnapshots.forEach(s=>{
+    log(`  ${s.year}: ${s.mem} MB (EVTS:${s.evts}, DEL_LOG:${s.dellog})`,'memory');
+  });
+
+  // 추세 검사: 데이터 추가가 끝났는데 메모리가 계속 증가하면 누수
+  const memDiff1=memSnapshots[1].mem-memSnapshots[0].mem;
+  const memDiff2=memSnapshots[2].mem-memSnapshots[1].mem;
+  if(memDiff2>memDiff1*1.2&&memDiff2>5){
+    log(`⚠️ 시간이 지날수록 메모리 증가폭이 커짐 (1→2년: ${memDiff1.toFixed(2)} MB, 2→3년: ${memDiff2.toFixed(2)} MB) — 누수 가능성`,'warn');
+  }
+
+  updateStats();
+  document.getElementById('btn-run').disabled=false;
+  log('========== 테스트 완료 ==========','ok');
+}
+</script>
+</body>
+</html>

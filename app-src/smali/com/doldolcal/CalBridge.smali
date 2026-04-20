@@ -10,6 +10,205 @@
     return-void
 .end method
 
+# 알림 권한 활성 여부 확인
+.method public isNotificationEnabled()Z
+    .locals 2
+    .annotation runtime Landroid/webkit/JavascriptInterface;
+    .end annotation
+
+    :try_start
+    iget-object v0, p0, Lcom/doldolcal/CalBridge;->mContext:Landroid/content/Context;
+    const-string v1, "notification"
+    invoke-virtual {v0, v1}, Landroid/content/Context;->getSystemService(Ljava/lang/String;)Ljava/lang/Object;
+    move-result-object v0
+    check-cast v0, Landroid/app/NotificationManager;
+    invoke-virtual {v0}, Landroid/app/NotificationManager;->areNotificationsEnabled()Z
+    move-result v0
+    return v0
+    :try_end
+    .catch Ljava/lang/Exception; {:try_start .. :try_end} :catch
+    :catch
+    move-exception v0
+    const/4 v0, 0x0
+    return v0
+.end method
+
+# 정확한 알람 권한 활성 여부 (Android 12+)
+.method public canScheduleExactAlarms()Z
+    .locals 3
+    .annotation runtime Landroid/webkit/JavascriptInterface;
+    .end annotation
+
+    :try_start
+    sget v0, Landroid/os/Build$VERSION;->SDK_INT:I
+    const/16 v1, 0x1f
+    if-ge v0, v1, :check
+    const/4 v0, 0x1
+    return v0
+    :check
+    iget-object v0, p0, Lcom/doldolcal/CalBridge;->mContext:Landroid/content/Context;
+    const-string v1, "alarm"
+    invoke-virtual {v0, v1}, Landroid/content/Context;->getSystemService(Ljava/lang/String;)Ljava/lang/Object;
+    move-result-object v0
+    check-cast v0, Landroid/app/AlarmManager;
+    invoke-virtual {v0}, Landroid/app/AlarmManager;->canScheduleExactAlarms()Z
+    move-result v0
+    return v0
+    :try_end
+    .catch Ljava/lang/Exception; {:try_start .. :try_end} :catch
+    :catch
+    move-exception v0
+    const/4 v0, 0x1
+    return v0
+.end method
+
+# 배터리 최적화 무시 활성 여부
+.method public isBatteryOptIgnored()Z
+    .locals 4
+    .annotation runtime Landroid/webkit/JavascriptInterface;
+    .end annotation
+
+    :try_start
+    iget-object v0, p0, Lcom/doldolcal/CalBridge;->mContext:Landroid/content/Context;
+    const-string v1, "power"
+    invoke-virtual {v0, v1}, Landroid/content/Context;->getSystemService(Ljava/lang/String;)Ljava/lang/Object;
+    move-result-object v1
+    check-cast v1, Landroid/os/PowerManager;
+    invoke-virtual {v0}, Landroid/content/Context;->getPackageName()Ljava/lang/String;
+    move-result-object v0
+    invoke-virtual {v1, v0}, Landroid/os/PowerManager;->isIgnoringBatteryOptimizations(Ljava/lang/String;)Z
+    move-result v0
+    return v0
+    :try_end
+    .catch Ljava/lang/Exception; {:try_start .. :try_end} :catch
+    :catch
+    move-exception v0
+    const/4 v0, 0x1
+    return v0
+.end method
+
+# 알림 설정 화면 열기
+.method public openNotificationSettings()V
+    .locals 3
+    .annotation runtime Landroid/webkit/JavascriptInterface;
+    .end annotation
+
+    :try_start
+    iget-object v0, p0, Lcom/doldolcal/CalBridge;->mContext:Landroid/content/Context;
+    new-instance v1, Landroid/content/Intent;
+    const-string v2, "android.settings.APP_NOTIFICATION_SETTINGS"
+    invoke-direct {v1, v2}, Landroid/content/Intent;-><init>(Ljava/lang/String;)V
+    const-string v2, "android.provider.extra.APP_PACKAGE"
+    invoke-virtual {v0}, Landroid/content/Context;->getPackageName()Ljava/lang/String;
+    move-result-object v2
+    const-string v3, "android.provider.extra.APP_PACKAGE"
+    invoke-virtual {v1, v3, v2}, Landroid/content/Intent;->putExtra(Ljava/lang/String;Ljava/lang/String;)Landroid/content/Intent;
+    const/high16 v2, 0x10000000
+    invoke-virtual {v1, v2}, Landroid/content/Intent;->addFlags(I)Landroid/content/Intent;
+    invoke-virtual {v0, v1}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+    :try_end
+    .catch Ljava/lang/Exception; {:try_start .. :try_end} :catch
+    return-void
+    :catch
+    move-exception v0
+    return-void
+.end method
+
+# 정확한 알람 권한 설정 화면 열기
+.method public openExactAlarmSettings()V
+    .locals 5
+    .annotation runtime Landroid/webkit/JavascriptInterface;
+    .end annotation
+
+    :try_start
+    sget v0, Landroid/os/Build$VERSION;->SDK_INT:I
+    const/16 v1, 0x1f
+    if-ge v0, v1, :ok
+    return-void
+    :ok
+    iget-object v0, p0, Lcom/doldolcal/CalBridge;->mContext:Landroid/content/Context;
+    new-instance v1, Landroid/content/Intent;
+    const-string v2, "android.settings.REQUEST_SCHEDULE_EXACT_ALARM"
+    invoke-direct {v1, v2}, Landroid/content/Intent;-><init>(Ljava/lang/String;)V
+    new-instance v2, Ljava/lang/StringBuilder;
+    invoke-direct {v2}, Ljava/lang/StringBuilder;-><init>()V
+    const-string v3, "package:"
+    invoke-virtual {v2, v3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    invoke-virtual {v0}, Landroid/content/Context;->getPackageName()Ljava/lang/String;
+    move-result-object v3
+    invoke-virtual {v2, v3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    invoke-virtual {v2}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+    move-result-object v2
+    invoke-static {v2}, Landroid/net/Uri;->parse(Ljava/lang/String;)Landroid/net/Uri;
+    move-result-object v2
+    invoke-virtual {v1, v2}, Landroid/content/Intent;->setData(Landroid/net/Uri;)Landroid/content/Intent;
+    const/high16 v2, 0x10000000
+    invoke-virtual {v1, v2}, Landroid/content/Intent;->addFlags(I)Landroid/content/Intent;
+    invoke-virtual {v0, v1}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+    :try_end
+    .catch Ljava/lang/Exception; {:try_start .. :try_end} :catch
+    return-void
+    :catch
+    move-exception v0
+    return-void
+.end method
+
+# 배터리 최적화 무시 요청 화면 열기
+.method public openBatteryOptSettings()V
+    .locals 5
+    .annotation runtime Landroid/webkit/JavascriptInterface;
+    .end annotation
+
+    :try_start
+    iget-object v0, p0, Lcom/doldolcal/CalBridge;->mContext:Landroid/content/Context;
+    new-instance v1, Landroid/content/Intent;
+    const-string v2, "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+    invoke-direct {v1, v2}, Landroid/content/Intent;-><init>(Ljava/lang/String;)V
+    new-instance v2, Ljava/lang/StringBuilder;
+    invoke-direct {v2}, Ljava/lang/StringBuilder;-><init>()V
+    const-string v3, "package:"
+    invoke-virtual {v2, v3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    invoke-virtual {v0}, Landroid/content/Context;->getPackageName()Ljava/lang/String;
+    move-result-object v3
+    invoke-virtual {v2, v3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    invoke-virtual {v2}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+    move-result-object v2
+    invoke-static {v2}, Landroid/net/Uri;->parse(Ljava/lang/String;)Landroid/net/Uri;
+    move-result-object v2
+    invoke-virtual {v1, v2}, Landroid/content/Intent;->setData(Landroid/net/Uri;)Landroid/content/Intent;
+    const/high16 v2, 0x10000000
+    invoke-virtual {v1, v2}, Landroid/content/Intent;->addFlags(I)Landroid/content/Intent;
+    invoke-virtual {v0, v1}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+    :try_end
+    .catch Ljava/lang/Exception; {:try_start .. :try_end} :catch
+    return-void
+    :catch
+    move-exception v0
+    return-void
+.end method
+
+# Move app to background (홈 버튼 누른 효과)
+.method public exitApp()V
+    .locals 2
+    .annotation runtime Landroid/webkit/JavascriptInterface;
+    .end annotation
+
+    :try_start
+    iget-object v0, p0, Lcom/doldolcal/CalBridge;->mContext:Landroid/content/Context;
+    instance-of v1, v0, Landroid/app/Activity;
+    if-eqz v1, :ret
+    check-cast v0, Landroid/app/Activity;
+    const/4 v1, 0x1
+    invoke-virtual {v0, v1}, Landroid/app/Activity;->moveTaskToBack(Z)Z
+    :ret
+    :try_end
+    .catch Ljava/lang/Exception; {:try_start .. :try_end} :catch
+    return-void
+    :catch
+    move-exception v0
+    return-void
+.end method
+
 # Schedule alarm at exact epoch millis. Called from JS when saving event.
 # p1=requestCode(int), p2=triggerAtMillis(long as string), p3=title, p4=message
 .method public scheduleAlarm(ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
@@ -61,25 +260,9 @@
     move-result-object v4
     check-cast v4, Landroid/app/AlarmManager;
 
-    # API 31+ (Android 12+): canScheduleExactAlarms 체크
-    sget v5, Landroid/os/Build$VERSION;->SDK_INT:I
-    const/16 v6, 0x1f
-    if-lt v5, v6, :do_exact
-
-    invoke-virtual {v4}, Landroid/app/AlarmManager;->canScheduleExactAlarms()Z
-    move-result v5
-    if-nez v5, :do_exact
-
-    # 정확한 알람 권한 없으면 일반 알람으로 (오차 허용)
-    const/4 v5, 0x0
-    invoke-virtual {v4, v5, v1, v2, v3}, Landroid/app/AlarmManager;->setAndAllowWhileIdle(IJLandroid/app/PendingIntent;)V
-    goto :alarm_done
-
-    :do_exact
+    # 항상 setExactAndAllowWhileIdle 사용 (USE_EXACT_ALARM 권한으로 자동 부여됨)
     const/4 v5, 0x0
     invoke-virtual {v4, v5, v1, v2, v3}, Landroid/app/AlarmManager;->setExactAndAllowWhileIdle(IJLandroid/app/PendingIntent;)V
-
-    :alarm_done
     :try_end
     .catch Ljava/lang/Exception; {:try_start .. :try_end} :catch
     return-void
@@ -174,24 +357,8 @@
     move-result-object v4
     check-cast v4, Landroid/app/AlarmManager;
 
-    # Check exact alarm permission (API 31+)
-    sget v5, Landroid/os/Build$VERSION;->SDK_INT:I
-    const/16 v6, 0x1f
-    if-lt v5, v6, :test_exact
-
-    invoke-virtual {v4}, Landroid/app/AlarmManager;->canScheduleExactAlarms()Z
-    move-result v5
-    if-nez v5, :test_exact
-
-    const/4 v0, 0x0
-    invoke-virtual {v4, v0, v1, v2, v3}, Landroid/app/AlarmManager;->setAndAllowWhileIdle(IJLandroid/app/PendingIntent;)V
-    goto :test_done
-
-    :test_exact
     const/4 v0, 0x0
     invoke-virtual {v4, v0, v1, v2, v3}, Landroid/app/AlarmManager;->setExactAndAllowWhileIdle(IJLandroid/app/PendingIntent;)V
-
-    :test_done
     :try_end
     .catch Ljava/lang/Exception; {:try_start .. :try_end} :catch
     return-void
