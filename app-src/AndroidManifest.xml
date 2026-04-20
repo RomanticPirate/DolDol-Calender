@@ -15,6 +15,11 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity android:name=".WidgetConfigActivity" android:exported="true" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE"/>
+            </intent-filter>
+        </activity>
         <service android:name=".CalWidgetService" android:exported="false" android:permission="android.permission.BIND_REMOTEVIEWS" />
         <receiver android:exported="true" android:name=".AlarmReceiver" />
         <receiver android:exported="true" android:name=".CalWidgetProvider">

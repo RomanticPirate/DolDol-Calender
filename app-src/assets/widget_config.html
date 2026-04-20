@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>위젯 설정</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;font-family:-apple-system,'Noto Sans KR',sans-serif;background:#202024;color:#fff;overflow:hidden}
+  .top{display:flex;align-items:center;height:56px;padding:0 16px;background:#000}
+  .top .back{font-size:22px;cursor:pointer;width:40px}
+  .top .ttl{flex:1;text-align:center;font-size:17px;font-weight:600}
+  .top .save{font-size:16px;cursor:pointer;width:40px;text-align:right;color:#fff}
+  .preview-wrap{display:flex;align-items:center;justify-content:center;padding:32px 16px;background:#3a3a40;height:calc(100% - 56px - 280px)}
+  .preview{width:240px;border-radius:18px;padding:14px;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+  .pv-hd{display:flex;align-items:center;font-size:11px;margin-bottom:8px}
+  .pv-hd .l{color:#999}
+  .pv-hd .m{flex:1;text-align:center;font-weight:600;font-size:13px}
+  .pv-hd .r{color:#999}
+  .pv-wk{display:flex;justify-content:space-around;font-size:9px;margin-bottom:4px}
+  .pv-wk span{flex:1;text-align:center;color:#888}
+  .pv-wk .sun{color:#FF6B6B}
+  .pv-wk .sat{color:#5B6AFF}
+  .pv-row{display:flex;font-size:9px;text-align:center;padding:3px 0;border-bottom:.5px solid rgba(0,0,0,.05)}
+  .pv-row span{flex:1}
+  .pv-row .sun{color:#FF6B6B}
+  .pv-row .sat{color:#5B6AFF}
+  .pv-row .today{background:#1A1A2E;color:#fff;border-radius:50%;width:18px;height:18px;line-height:18px;display:inline-block;margin:0 auto}
+  .opts{position:fixed;bottom:0;left:0;right:0;background:#202024;padding:0 0 24px}
+  .tabs{display:flex;border-bottom:1px solid #3a3a40}
+  .tab{flex:1;text-align:center;padding:14px;color:#999;font-size:14px;cursor:pointer;border-bottom:2px solid transparent}
+  .tab.on{color:#fff;border-color:#7B61FF}
+  .opt{display:flex;align-items:center;padding:14px 20px;font-size:14px}
+  .opt .lbl{width:80px;color:#fff}
+  .opt .val{flex:1;display:flex;align-items:center;gap:24px}
+  .radio{display:flex;align-items:center;gap:6px;cursor:pointer}
+  .radio .dot{width:18px;height:18px;border:2px solid #555;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+  .radio.on .dot{border-color:#7B61FF}
+  .radio.on .dot::after{content:'';width:8px;height:8px;background:#7B61FF;border-radius:50%}
+  .slider{flex:1;-webkit-appearance:none;height:4px;background:#3a3a40;border-radius:2px;outline:none}
+  .slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#7B61FF;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="back" id="btnBack">←</div>
+  <div class="ttl">위젯 설정</div>
+  <div class="save" id="btnSave">저장</div>
+</div>
+<div class="preview-wrap">
+  <div class="preview" id="preview">
+    <div class="pv-hd"><span class="l">오늘</span><span class="m" id="pvTitle">2026.04</span><span class="r">⚙ +</span></div>
+    <div class="pv-wk"><span class="sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="sat">토</span></div>
+    <div id="pvBody"></div>
+  </div>
+</div>
+<div class="opts">
+  <div class="tabs">
+    <div class="tab" id="tabSet">위젯 설정</div>
+    <div class="tab on" id="tabStyle">위젯 스타일</div>
+  </div>
+  <div class="opt">
+    <div class="lbl">스타일</div>
+    <div class="val">
+      <div class="radio on" data-style="white"><span class="dot"></span><span>흰색</span></div>
+      <div class="radio" data-style="black"><span class="dot"></span><span>검은색</span></div>
+    </div>
+  </div>
+  <div class="opt">
+    <div class="lbl">투명도</div>
+    <div class="val"><input type="range" class="slider" id="sldOpacity" min="0" max="100" value="100"></div>
+  </div>
+  <div class="opt">
+    <div class="lbl">글자 크기</div>
+    <div class="val">
+      <div class="radio on" data-size="normal"><span class="dot"></span><span>보통</span></div>
+      <div class="radio" data-size="large"><span class="dot"></span><span>크게</span></div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var widgetId = -1;
+  var style = 'white';
+  var opacity = 100;
+  var fontSize = 'normal';
+
+  // Get widget id from intent (set by Activity via JS)
+  if (window.WidgetCfg && window.WidgetCfg.getWidgetId) {
+    widgetId = parseInt(window.WidgetCfg.getWidgetId()) || -1;
+    style = window.WidgetCfg.getStyle(widgetId) || 'white';
+    opacity = parseInt(window.WidgetCfg.getOpacity(widgetId)) || 100;
+    fontSize = window.WidgetCfg.getFontSize(widgetId) || 'normal';
+  }
+
+  // Restore UI from saved state
+  document.querySelectorAll('[data-style]').forEach(function(el){
+    el.classList.toggle('on', el.dataset.style === style);
+  });
+  document.querySelectorAll('[data-size]').forEach(function(el){
+    el.classList.toggle('on', el.dataset.size === fontSize);
+  });
+  document.getElementById('sldOpacity').value = opacity;
+
+  function buildPreviewBody(){
+    var body = document.getElementById('pvBody');
+    body.innerHTML = '';
+    var d = new Date();
+    var y = d.getFullYear(), m = d.getMonth();
+    var first = new Date(y, m, 1);
+    var startDay = first.getDay();
+    var daysInMonth = new Date(y, m+1, 0).getDate();
+    var today = d.getDate();
+    var date = 1 - startDay;
+    for (var w = 0; w < 6; w++) {
+      var row = document.createElement('div');
+      row.className = 'pv-row';
+      for (var i = 0; i < 7; i++) {
+        var s = document.createElement('span');
+        if (date < 1 || date > daysInMonth) {
+          s.textContent = '';
+        } else if (date === today) {
+          s.innerHTML = '<span class="today">'+date+'</span>';
+        } else {
+          s.textContent = date;
+          if (i === 0) s.className = 'sun';
+          else if (i === 6) s.className = 'sat';
+        }
+        row.appendChild(s);
+        date++;
+      }
+      body.appendChild(row);
+      if (date > daysInMonth) break;
+    }
+    document.getElementById('pvTitle').textContent = y + '.' + String(m+1).padStart(2,'0');
+  }
+
+  function applyPreview(){
+    var pv = document.getElementById('preview');
+    var bg, fg, sub;
+    if (style === 'black') { bg = '26,26,32'; fg = '#fff'; sub = '#aaa'; }
+    else { bg = '255,255,255'; fg = '#1A1A2E'; sub = '#7C7C8A'; }
+    var alpha = (opacity / 100).toFixed(2);
+    pv.style.background = 'rgba('+bg+','+alpha+')';
+    pv.style.color = fg;
+    pv.querySelectorAll('.pv-hd .l, .pv-hd .r, .pv-wk span:not(.sun):not(.sat)').forEach(function(el){
+      el.style.color = sub;
+    });
+    pv.querySelectorAll('.pv-row span:not(.sun):not(.sat)').forEach(function(el){
+      el.style.color = fg;
+    });
+    pv.querySelectorAll('.pv-hd .m').forEach(function(el){ el.style.color = fg; });
+    pv.style.fontSize = (fontSize === 'large') ? '11px' : '9px';
+  }
+
+  document.querySelectorAll('[data-style]').forEach(function(el){
+    el.addEventListener('click', function(){
+      style = el.dataset.style;
+      document.querySelectorAll('[data-style]').forEach(function(x){
+        x.classList.toggle('on', x === el);
+      });
+      applyPreview();
+    });
+  });
+  document.querySelectorAll('[data-size]').forEach(function(el){
+    el.addEventListener('click', function(){
+      fontSize = el.dataset.size;
+      document.querySelectorAll('[data-size]').forEach(function(x){
+        x.classList.toggle('on', x === el);
+      });
+      applyPreview();
+    });
+  });
+  document.getElementById('sldOpacity').addEventListener('input', function(e){
+    opacity = parseInt(e.target.value);
+    applyPreview();
+  });
+
+  document.getElementById('btnBack').addEventListener('click', function(){
+    if (window.WidgetCfg && window.WidgetCfg.cancel) window.WidgetCfg.cancel();
+  });
+  document.getElementById('btnSave').addEventListener('click', function(){
+    if (window.WidgetCfg && window.WidgetCfg.save) {
+      window.WidgetCfg.save(widgetId, style, opacity, fontSize);
+    }
+  });
+
+  buildPreviewBody();
+  applyPreview();
+})();
+</script>
+</body>
+</html>
