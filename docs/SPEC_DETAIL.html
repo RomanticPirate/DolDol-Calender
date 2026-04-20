@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>돌돌 캘린더 — 기술 상세 기획서</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--p:#5B6AFF;--pl:#E8EAFF;--bg:#F8F9FC;--c:#FFF;--t:#1A1A2E;--ts:#6B7280;--bd:#E5E7EB;--dg:#EF4444;--sc:#10B981;--wn:#F59E0B;--in:#3B82F6}
+body{font-family:'Pretendard',-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--t);line-height:1.7}
+.hdr{background:linear-gradient(135deg,#1E293B,#334155);color:#fff;padding:48px 0 38px;text-align:center}
+.hdr h1{font-size:34px;font-weight:800}.hdr .sub{font-size:15px;opacity:.85;margin-top:4px}.hdr .meta{margin-top:14px;font-size:13px;opacity:.6;display:flex;justify-content:center;gap:20px}
+.wrap{max-width:960px;margin:0 auto;padding:28px 20px 60px}
+.toc{background:var(--c);border-radius:14px;padding:24px;margin-bottom:28px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.toc h2{font-size:17px;margin-bottom:10px;color:var(--p)}
+.toc-g{display:grid;grid-template-columns:1fr 1fr;gap:5px 24px}
+.toc a{color:var(--t);text-decoration:none;font-size:13px;padding:4px 0;display:flex;align-items:center;gap:6px}
+.toc a:hover{color:var(--p)}
+.tn{background:var(--pl);color:var(--p);font-weight:700;font-size:10px;min-width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.s{background:var(--c);border-radius:14px;padding:28px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.sh{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--pl)}
+.sn{background:#1E293B;color:#fff;font-weight:800;font-size:13px;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.s h2{font-size:20px;font-weight:700}
+.ss{margin-bottom:20px}.ss:last-child{margin-bottom:0}
+.ss h3{font-size:15px;font-weight:700;margin-bottom:8px}
+table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}
+th{background:#F1F5F9;color:#334155;font-weight:700;padding:8px 12px;text-align:left;font-size:11px}
+td{padding:8px 12px;border-bottom:1px solid var(--bd);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.el{font-weight:600;white-space:nowrap}
+code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:11px;font-family:'Courier New',monospace}
+.db{background:#1E293B;color:#E2E8F0;border-radius:10px;padding:16px;margin:8px 0;font-family:'Courier New',monospace;font-size:11px;line-height:1.5;overflow-x:auto;white-space:pre}
+.k{color:#7DD3FC}.sv{color:#86EFAC}.nv{color:#FCD34D}.bv{color:#C4B5FD}.cm{color:#64748B}
+.ib{padding:12px 16px;border-radius:10px;margin:10px 0;font-size:12px;line-height:1.5}
+.ib.note{background:#EFF6FF;border-left:4px solid var(--in)}
+.ib.warn{background:#FFFBEB;border-left:4px solid var(--wn)}
+.ib.danger{background:#FEF2F2;border-left:4px solid var(--dg)}
+.ib.ok{background:#ECFDF5;border-left:4px solid var(--sc)}
+.ib strong{display:block;margin-bottom:2px}
+.fl{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:8px 0}
+.fs{background:var(--pl);color:var(--p);padding:5px 10px;border-radius:6px;font-size:10px;font-weight:600}
+.fa{color:var(--ts);font-size:13px}
+@media(max-width:640px){.toc-g{grid-template-columns:1fr}.hdr h1{font-size:22px}.s{padding:20px 14px}}
+</style>
+</head>
+<body>
+<div class="hdr">
+<h1>돌돌 캘린더 — 기술 상세 기획서</h1>
+<div class="sub">데이터 구조 · 내부 로직 · 동기화 · 프로세스 흐름</div>
+<div class="meta"><span>v3.0</span><span>2026-04-13</span><span>© 2026 JJW</span></div>
+</div>
+<div class="wrap">
+
+<div class="toc">
+<h2>목차</h2>
+<div class="toc-g">
+<a href="#s1"><span class="tn">1</span>데이터 스키마</a>
+<a href="#s2"><span class="tn">2</span>localStorage 키</a>
+<a href="#s3"><span class="tn">3</span>캘린더 렌더링</a>
+<a href="#s4"><span class="tn">4</span>반복 일정 매칭</a>
+<a href="#s5"><span class="tn">5</span>D-Day 계산</a>
+<a href="#s6"><span class="tn">6</span>색상 밝기 판별</a>
+<a href="#s7"><span class="tn">7</span>카테고리 시스템</a>
+<a href="#s8"><span class="tn">8</span>알림 시스템</a>
+<a href="#s9"><span class="tn">9</span>이모지 팔레트</a>
+<a href="#s10"><span class="tn">10</span>공휴일 시스템</a>
+<a href="#s11"><span class="tn">11</span>iCalendar 익스포트</a>
+<a href="#s12"><span class="tn">12</span>동기화 규칙</a>
+<a href="#s13"><span class="tn">13</span>데이터 유실 방지</a>
+<a href="#s14"><span class="tn">14</span>ID/코드 생성</a>
+<a href="#s15"><span class="tn">15</span>프로세스 흐름</a>
+<a href="#s16"><span class="tn">16</span>타이틀 이미지 규칙</a>
+</div>
+</div>
+
+<!-- 1 -->
+<div class="s" id="s1">
+<div class="sh"><span class="sn">1</span><h2>데이터 스키마</h2></div>
+
+<div class="ss"><h3>1.1 사용자 (User)</h3>
+<div class="db">{
+  <span class="k">"id"</span>:    <span class="sv">"lxk3a7b2m"</span>,
+  <span class="k">"name"</span>:  <span class="sv">"진우"</span>,           <span class="cm">// 설정에서 수정 가능. 변경 시 모든 댓글도 동기 갱신</span>
+  <span class="k">"color"</span>: <span class="sv">"#5B6AFF"</span>         <span class="cm">// 멤버 고유 색상 (15색 감성 톤). 댓글 아바타에 사용</span>
+}</div></div>
+
+<div class="ss"><h3>1.2 캘린더 (Calendar) — 1개 고정</h3>
+<div class="db">{
+  <span class="k">"id"</span>:         <span class="sv">"cal_xxx"</span>,
+  <span class="k">"name"</span>:       <span class="sv">"돌돌 캘린더"</span>,    <span class="cm">// 고정, 변경 불가</span>
+  <span class="k">"inviteCode"</span>: <span class="sv">"ABC123"</span>,         <span class="cm">// 6자리 영숫자</span>
+  <span class="k">"members"</span>: [
+    { <span class="k">"id"</span>:<span class="sv">"user1"</span>, <span class="k">"name"</span>:<span class="sv">"진우"</span>, <span class="k">"color"</span>:<span class="sv">"#5B6AFF"</span> },
+    { <span class="k">"id"</span>:<span class="sv">"demo1"</span>, <span class="k">"name"</span>:<span class="sv">"이솔"</span>, <span class="k">"color"</span>:<span class="sv">"#FF6B9D"</span> }
+  ],
+  <span class="k">"createdAt"</span>: <span class="sv">"2026-04-13"</span>
+}</div></div>
+
+<div class="ss"><h3>1.3 카테고리 (Category)</h3>
+<div class="db">{
+  <span class="k">"id"</span>:    <span class="sv">"cat_xxx"</span>,
+  <span class="k">"name"</span>:  <span class="sv">"기념일"</span>,
+  <span class="k">"color"</span>: <span class="sv">"#FF6B6B"</span>,         <span class="cm">// 15색 감성 톤 중 선택</span>
+  <span class="k">"icon"</span>:  <span class="sv">"💍"</span>              <span class="cm">// Unicode 이모지 (13탭 260종)</span>
+}</div></div>
+
+<div class="ss"><h3>1.4 일정 (Event)</h3>
+<div class="db">{
+  <span class="k">"id"</span>:           <span class="sv">"evt_xxx"</span>,
+  <span class="k">"calendarId"</span>:   <span class="sv">"cal_xxx"</span>,
+  <span class="k">"title"</span>:        <span class="sv">"팀 미팅"</span>,
+  <span class="k">"date"</span>:         <span class="sv">"2026-04-13"</span>,     <span class="cm">// 시작일 (필수)</span>
+  <span class="k">"endDate"</span>:      <span class="sv">"2026-04-13"</span>,     <span class="cm">// 종료일 (디폴트=시작일)</span>
+  <span class="k">"startTime"</span>:    <span class="sv">"09:00"</span>,          <span class="cm">// 종일이면 null</span>
+  <span class="k">"endTime"</span>:      <span class="sv">"10:00"</span>,          <span class="cm">// 종일이면 null</span>
+  <span class="k">"isAllDay"</span>:     <span class="bv">false</span>,            <span class="cm">// 디폴트 false</span>
+  <span class="k">"repeat"</span>:       <span class="sv">"none"</span>,           <span class="cm">// none|daily|weekly|monthly|yearly</span>
+  <span class="k">"color"</span>:        <span class="sv">"#FF6B6B"</span>,        <span class="cm">// 카테고리에서 가져옴</span>
+  <span class="k">"catIcon"</span>:      <span class="sv">"💍"</span>,             <span class="cm">// 카테고리 아이콘</span>
+  <span class="k">"memo"</span>:         <span class="sv">"회의실 B\n준비물 챙기기"</span>, <span class="cm">// 줄바꿈 보존</span>
+  <span class="k">"targets"</span>:      [<span class="sv">"all"</span>],          <span class="cm">// ["all"] 또는 ["user1","demo1"]</span>
+  <span class="k">"alarms"</span>:       [<span class="sv">"1d"</span>,<span class="sv">"1h"</span>],      <span class="cm">// 프리셋 알림 코드 배열</span>
+  <span class="k">"customAlarms"</span>: [                 <span class="cm">// 사용자 정의 알림</span>
+    { <span class="k">"weeks"</span>:<span class="nv">0</span>, <span class="k">"days"</span>:<span class="nv">0</span>, <span class="k">"hours"</span>:<span class="nv">2</span>, <span class="k">"mins"</span>:<span class="nv">0</span> }
+  ],
+  <span class="k">"createdBy"</span>:    <span class="sv">"user1"</span>,
+  <span class="k">"comments"</span>: [
+    { <span class="k">"userId"</span>:<span class="sv">"user1"</span>, <span class="k">"name"</span>:<span class="sv">"진우"</span>, <span class="k">"text"</span>:<span class="sv">"확인!"</span>, <span class="k">"time"</span>:<span class="sv">"2026.4.13 오후 3:00"</span> }
+  ],
+  <span class="k">"createdAt"</span>:    <span class="sv">"2026-04-13"</span>,
+  <span class="k">"updatedAt"</span>:    <span class="sv">"2026-04-13T15:00:00Z"</span>
+}</div></div>
+
+<div class="ss"><h3>1.5 히스토리 (Notification)</h3>
+<div class="db">{ <span class="k">"icon"</span>:<span class="sv">"📅"</span>, <span class="k">"text"</span>:<span class="sv">"\"팀 미팅\" 추가됨"</span>, <span class="k">"time"</span>:<span class="sv">"2026.4.13 오후 3:00"</span> }
+<span class="cm">// 최대 30개. 초과 시 오래된 것부터 자동 삭제</span></div></div>
+
+<div class="ss"><h3>1.6 삭제 기록 (DeleteLog)</h3>
+<div class="db">{
+  <span class="k">"eventId"</span>:   <span class="sv">"evt_xxx"</span>,
+  <span class="k">"deletedBy"</span>: <span class="sv">"user1"</span>,
+  <span class="k">"deletedAt"</span>: <span class="sv">"2026-04-13T15:00:00Z"</span>,
+  <span class="k">"snapshot"</span>:  { ... }          <span class="cm">// 삭제 직전 일정 전체 백업</span>
+}</div>
+<div class="ib ok"><strong>복구 가능</strong>삭제 시 전체 스냅샷을 보존하므로 실수 삭제 복구 가능</div>
+</div>
+</div>
+
+<!-- 2 -->
+<div class="s" id="s2">
+<div class="sh"><span class="sn">2</span><h2>localStorage 키</h2></div>
+<div class="ss">
+<table>
+<tr><th>키</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>dd_user</code></td><td>Object</td><td>현재 사용자 프로필</td></tr>
+<tr><td><code>dd_calendar</code></td><td>Object</td><td>캘린더 (1개)</td></tr>
+<tr><td><code>dd_events</code></td><td>Array</td><td>모든 일정</td></tr>
+<tr><td><code>dd_notifs</code></td><td>Array</td><td>히스토리 (최대 30개)</td></tr>
+<tr><td><code>dd_delete_log</code></td><td>Array</td><td>삭제 기록 (스냅샷 포함)</td></tr>
+<tr><td><code>dd_backup</code></td><td>Object</td><td>쓰기 전 백업</td></tr>
+<tr><td><code>dd_categories</code></td><td>Array</td><td>카테고리 목록</td></tr>
+<tr><td><code>dd_holiday_cache</code></td><td>Object</td><td>공휴일 API 캐시 (월별)</td></tr>
+<tr><td><code>dd_holiday_apikey</code></td><td>String</td><td>공공데이터 API 키</td></tr>
+<tr><td><code>dd_myonly</code></td><td>String</td><td>"true"/"false" — 내 일정만 보기 설정</td></tr>
+</table>
+</div>
+</div>
+
+<!-- 3 -->
+<div class="s" id="s3">
+<div class="sh"><span class="sn">3</span><h2>캘린더 렌더링</h2></div>
+<div class="ss"><h3>3.1 구조</h3>
+<p>7열 CSS Grid (<code>.cal-grid</code>) 안에 42개 셀 (<code>.cal-cell</code>). 각 셀은 날짜 숫자 + 공휴일명 + 일정 라벨 영역을 포함.</p>
+<table>
+<tr><td class="el">셀 높이</td><td><strong>95px 고정</strong> (CSS <code>height:95px</code>). 일정 유무 무관</td></tr>
+<tr><td class="el">행 수</td><td>항상 6행 (42셀). 부족분은 이전/다음 월 패딩</td></tr>
+<tr><td class="el">일정 최대</td><td>셀 내 <strong>4개</strong>까지 라벨 표시. 초과분 "+N"</td></tr>
+<tr><td class="el">선택일</td><td><strong>셀 전체</strong>에 <code>border:2px solid var(--p)</code> + 연보라 배경</td></tr>
+<tr><td class="el">라벨 형태</td><td><code>카테고리아이콘 + 색상배경 + 제목텍스트</code></td></tr>
+</table>
+</div>
+<div class="ss"><h3>3.2 렌더 프로세스</h3>
+<div class="fl">
+<span class="fs">renderCal()</span><span class="fa">→</span>
+<span class="fs">월 타이틀 갱신</span><span class="fa">→</span>
+<span class="fs">42셀 생성</span><span class="fa">→</span>
+<span class="fs">각 셀: 날짜+공휴일+일정라벨(최대4)+"+N"</span><span class="fa">→</span>
+<span class="fs">grid에 append</span><span class="fa">→</span>
+<span class="fs">renderDP() 패널</span>
+</div></div>
+</div>
+
+<!-- 4 -->
+<div class="s" id="s4">
+<div class="sh"><span class="sn">4</span><h2>반복 일정 매칭</h2></div>
+<div class="ss">
+<h3><code>gEvts(dateStr)</code></h3>
+<table>
+<tr><th>유형</th><th>조건</th></tr>
+<tr><td class="el">none</td><td><code>date==ds</code> OR <code>date≤ds≤endDate</code></td></tr>
+<tr><td class="el">daily</td><td>생성일 이후 모든 날</td></tr>
+<tr><td class="el">weekly</td><td><code>(ds-date) % 7 == 0</code></td></tr>
+<tr><td class="el">monthly</td><td><code>date.day == ds.day</code></td></tr>
+<tr><td class="el">yearly</td><td><code>date.month+day == ds.month+day</code></td></tr>
+</table>
+<p style="font-size:12px;margin-top:6px">"내 일정만 보기" ON 시: <code>targets</code>에 <code>"all"</code> 또는 내 ID가 포함된 일정만 반환</p>
+</div>
+</div>
+
+<!-- 5 -->
+<div class="s" id="s5">
+<div class="sh"><span class="sn">5</span><h2>D-Day 계산</h2></div>
+<div class="ss">
+<table>
+<tr><th>함수</th><th>로직</th></tr>
+<tr><td class="el"><code>getDday(ds)</code></td><td>오늘과의 차이. 당일="D-Day", 미래="D-N", 과거="D+N"</td></tr>
+<tr><td class="el"><code>nxAn(ds)</code></td><td>매년 반복 일정의 다음 돌아오는 날짜 (올해 지났으면 내년)</td></tr>
+</table>
+<p style="font-size:12px;margin-top:6px">D-Day는 <code>repeat==='yearly'</code>인 일정에만 표시</p>
+</div>
+</div>
+
+<!-- 6 -->
+<div class="s" id="s6">
+<div class="sh"><span class="sn">6</span><h2>색상 밝기 판별</h2></div>
+<div class="ss">
+<h3>상대적 휘도 (Relative Luminance)</h3>
+<div class="db">function txC(hex) {
+  <span class="cm">// hex → RGB → sRGB to linear → 휘도 계산</span>
+  <span class="cm">// 휘도 > 0.179 → '#1A1A2E' (어두운 글씨)</span>
+  <span class="cm">// 휘도 ≤ 0.179 → '#FFF' (흰 글씨)</span>
+}</div>
+<p style="font-size:12px">캘린더 라벨, 일정 목록, 카테고리 선택 등 색상 배경 위 텍스트에 공통 적용</p>
+</div>
+</div>
+
+<!-- 7 -->
+<div class="s" id="s7">
+<div class="sh"><span class="sn">7</span><h2>카테고리 시스템</h2></div>
+<div class="ss">
+<table>
+<tr><th>항목</th><th>설명</th></tr>
+<tr><td class="el">관리 위치</td><td>설정 → 카테고리 관리 팝업</td></tr>
+<tr><td class="el">구성</td><td>이름 + 색상(15종 감성 톤) + 아이콘(13탭 260종 Unicode 이모지)</td></tr>
+<tr><td class="el">색상표</td><td>#FF6B6B, #FF9F9F, #FF9F43, #FECA57, #A8E6CF, #55EFC4, #48DBFB, #74B9FF, #5B6AFF, #A29BFE, #DDA0DD, #FF6B9D, #FDA7DF, #95A5A6, #636E72</td></tr>
+<tr><td class="el">아이콘 탭</td><td>⭐자주쓰는 / 😀표정 / ❤️하트 / 🎉이벤트 / 🏠장소 / 🚗교통 / 🍔음식 / ⚽운동 / 📚학습 / 🐶동물 / 🌸자연 / 💊건강 / 💰돈</td></tr>
+<tr><td class="el">일정에서</td><td>설정에서 만든 카테고리만 선택 가능 (라디오). 추가/수정 불가</td></tr>
+<tr><td class="el">반영</td><td>선택한 카테고리의 color→일정 색상, icon→일정 catIcon</td></tr>
+<tr><td class="el">표시</td><td>캘린더 미리보기, 일정 패널, 상세 모달에서 아이콘+제목으로 표시</td></tr>
+</table>
+</div>
+</div>
+
+<!-- 8 -->
+<div class="s" id="s8">
+<div class="sh"><span class="sn">8</span><h2>알림 시스템</h2></div>
+<div class="ss">
+<h3>8.1 데이터 구조</h3>
+<table>
+<tr><td class="el">targets</td><td><code>["all"]</code> 또는 <code>["user1","demo1"]</code> — 알림 대상 = 일정 참가자</td></tr>
+<tr><td class="el">alarms</td><td><code>["1d","1h"]</code> — 프리셋 코드 배열</td></tr>
+<tr><td class="el">customAlarms</td><td><code>[{weeks,days,hours,mins}]</code> — 사용자 정의</td></tr>
+</table>
+</div>
+<div class="ss"><h3>8.2 프리셋</h3>
+<table>
+<tr><th>코드</th><th>표시</th><th>디폴트</th></tr>
+<tr><td>on</td><td>시작 시간</td><td></td></tr>
+<tr><td>5m</td><td>5분 전</td><td></td></tr>
+<tr><td>10m</td><td>10분 전</td><td></td></tr>
+<tr><td>30m</td><td>30분 전</td><td></td></tr>
+<tr><td>1h</td><td>1시간 전</td><td>☑</td></tr>
+<tr><td>1d</td><td>1일 전</td><td>☑</td></tr>
+<tr><td>1w</td><td>1주 전</td><td></td></tr>
+</table>
+</div>
+<div class="ss"><h3>8.3 프로덕션 구현</h3>
+<table>
+<tr><td class="el">방식</td><td>Android AlarmManager (로컬). FCM 불필요</td></tr>
+<tr><td class="el">흐름</td><td>동기화→새 일정 수신→로컬 AlarmManager 등록→시간 되면 Notification</td></tr>
+<tr><td class="el">백그라운드</td><td>WorkManager로 주기적 동기화 (6시간)</td></tr>
+<tr><td class="el">테스트</td><td>🔔TEST 버튼: 5초 후 Web Notification / Android Bridge (배포 시 제거)</td></tr>
+</table>
+</div>
+</div>
+
+<!-- 9 -->
+<div class="s" id="s9">
+<div class="sh"><span class="sn">9</span><h2>이모지 팔레트</h2></div>
+<div class="ss">
+<table>
+<tr><td class="el">용도</td><td>일정 제목에 이모지 삽입</td></tr>
+<tr><td class="el">규격</td><td>Unicode Standard (OS 내장 렌더링)</td></tr>
+<tr><td class="el">탭</td><td>8개: 😀자주쓰는/😃표정/👋손/❤️하트/🎉이벤트/🍔음식/🏠장소/⏰시간</td></tr>
+<tr><td class="el">그리드</td><td>8열, max-height 170px, 스크롤</td></tr>
+<tr><td class="el">삽입</td><td>커서 위치(selectionStart)에 삽입</td></tr>
+<tr><td class="el">닫기</td><td>바깥 클릭 시 자동 닫힘</td></tr>
+</table>
+</div>
+</div>
+
+<!-- 10 -->
+<div class="s" id="s10">
+<div class="sh"><span class="sn">10</span><h2>공휴일 시스템</h2></div>
+<div class="ss">
+<table>
+<tr><th>우선순위</th><th>소스</th><th>커버리지</th></tr>
+<tr><td>1</td><td>공공데이터 API</td><td>임시공휴일 포함 전체</td></tr>
+<tr><td>2</td><td>내장 양력 (8개)</td><td>신정/삼일절/어린이날/현충일/광복절/개천절/한글날/크리스마스</td></tr>
+<tr><td>3</td><td>내장 음력 (2025~2027)</td><td>설날/추석/부처님오신날/대체공휴일</td></tr>
+</table>
+<div class="fl"><span class="fs">앱 시작/월 이동</span><span class="fa">→</span><span class="fs">캐시 확인</span><span class="fa">→</span><span class="fs">miss→API fetch</span><span class="fa">→</span><span class="fs">hCache[YYYY-MM] 저장</span><span class="fa">→</span><span class="fs">localStorage 캐시</span><span class="fa">→</span><span class="fs">달력 재렌더</span></div>
+</div>
+</div>
+
+<!-- 11 -->
+<div class="s" id="s11">
+<div class="sh"><span class="sn">11</span><h2>iCalendar 익스포트</h2></div>
+<div class="ss">
+<table>
+<tr><td class="el">규격</td><td>RFC 5545 (.ics)</td></tr>
+<tr><td class="el">호환</td><td>Google 캘린더, Apple 캘린더, Outlook 등</td></tr>
+<tr><td class="el">파일명</td><td>doldol_calendar.ics</td></tr>
+</table>
+<div class="db">BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//DolDol//KO
+BEGIN:VEVENT
+UID:evt_xxx@doldol
+DTSTART;VALUE=DATE:20260413
+SUMMARY:💍 결혼기념일
+RRULE:FREQ=YEARLY
+BEGIN:VALARM
+TRIGGER:-P1D
+ACTION:DISPLAY
+END:VALARM
+END:VEVENT
+END:VCALENDAR</div>
+<h3 style="margin-top:10px">반복/알림 매핑</h3>
+<table>
+<tr><th>앱</th><th>RRULE / TRIGGER</th></tr>
+<tr><td>daily~yearly</td><td>FREQ=DAILY~YEARLY</td></tr>
+<tr><td>on/5m/10m/30m</td><td>PT0S / -PT5M / -PT10M / -PT30M</td></tr>
+<tr><td>1h/1d/1w</td><td>-PT1H / -P1D / -P7D</td></tr>
+<tr><td>custom {w,d,h,m}</td><td>-P{w}W{d}DT{h}H{m}M</td></tr>
+</table>
+</div>
+</div>
+
+<!-- 12 -->
+<div class="s" id="s12">
+<div class="sh"><span class="sn">12</span><h2>동기화 규칙 (프로덕션)</h2></div>
+<div class="ss">
+<div class="ib danger"><strong>최우선 원칙: 데이터 유실 절대 금지</strong></div>
+<table>
+<tr><th>원칙</th><th>설명</th></tr>
+<tr><td class="el">updatedAt 비교</td><td>일정별 타임스탬프로 최신 판별</td></tr>
+<tr><td class="el">최신 우선</td><td>같은 ID → updatedAt 최근 쪽 승리</td></tr>
+<tr><td class="el">삭제 기록</td><td>deleteLog 비교로 삭제 여부 판단</td></tr>
+<tr><td class="el">충돌 보존</td><td>양쪽 수정 시 → 두 버전 보존, 사용자 선택</td></tr>
+<tr><td class="el">삭제 vs 수정</td><td>수정 우선 (삭제보다 수정본 보존)</td></tr>
+<tr><td class="el">병합 검증</td><td>일정 수가 줄면 쓰기 중단</td></tr>
+</table>
+<div class="fl"><span class="fs">앱 시작</span><span class="fa">→</span><span class="fs">로컬 백업</span><span class="fa">→</span><span class="fs">서버 fetch</span><span class="fa">→</span><span class="fs">일정별 비교</span><span class="fa">→</span><span class="fs">병합+검증</span><span class="fa">→</span><span class="fs">로컬+서버 쓰기</span></div>
+</div>
+</div>
+
+<!-- 13 -->
+<div class="s" id="s13">
+<div class="sh"><span class="sn">13</span><h2>데이터 유실 방지</h2></div>
+<div class="ss">
+<table>
+<tr><th>계층</th><th>보호</th><th>방법</th></tr>
+<tr><td class="el">L1</td><td>쓰기 실패</td><td>save() 전 현재 데이터를 dd_backup에 복사</td></tr>
+<tr><td class="el">L2</td><td>실수 삭제</td><td>삭제 시 전체 스냅샷을 dd_delete_log에 보존</td></tr>
+<tr><td class="el">L3</td><td>동기화 충돌</td><td>양쪽 데이터 모두 보존. 덮어쓰기 금지</td></tr>
+<tr><td class="el">L4</td><td>데이터 소멸</td><td>병합 후 일정 수가 줄면 쓰기 중단</td></tr>
+</table>
+</div>
+</div>
+
+<!-- 14 -->
+<div class="s" id="s14">
+<div class="sh"><span class="sn">14</span><h2>ID/코드 생성</h2></div>
+<div class="ss">
+<table>
+<tr><th>용도</th><th>함수</th><th>형식</th></tr>
+<tr><td>일정/사용자/카테고리 ID</td><td><code>gid()</code></td><td>timestamp(base36) + random(5자)</td></tr>
+<tr><td>초대 코드</td><td><code>gcode()</code></td><td>random(6자).toUpperCase()</td></tr>
+</table>
+</div>
+</div>
+
+<!-- 15 -->
+<div class="s" id="s15">
+<div class="sh"><span class="sn">15</span><h2>프로세스 흐름</h2></div>
+
+<div class="ss"><h3>15.1 앱 부팅</h3>
+<div class="fl"><span class="fs">load()</span><span class="fa">→</span><span class="fs">User 있음?</span><span class="fa">→</span><span class="fs">YES: init()</span><span class="fa">→</span><span class="fs">renderCal + fetchH</span></div>
+<div class="fl"><span class="fs">User 없음?</span><span class="fa">→</span><span class="fs">온보딩</span><span class="fa">→</span><span class="fs">닉네임→프로필+캘린더+카테고리3+샘플2 생성</span><span class="fa">→</span><span class="fs">init()</span></div>
+</div>
+
+<div class="ss"><h3>15.2 일정 생성</h3>
+<div class="fl"><span class="fs">FAB(+)</span><span class="fa">→</span><span class="fs">모달 (scrollTop=0)</span><span class="fa">→</span><span class="fs">입력</span><span class="fa">→</span><span class="fs">[저장]</span><span class="fa">→</span><span class="fs">검증</span><span class="fa">→</span><span class="fs">EVTS.push</span><span class="fa">→</span><span class="fs">히스토리</span><span class="fa">→</span><span class="fs">save(백업)</span><span class="fa">→</span><span class="fs">모달닫힘</span><span class="fa">→</span><span class="fs">renderCal</span><span class="fa">→</span><span class="fs">토스트</span></div>
+</div>
+
+<div class="ss"><h3>15.3 일정 삭제</h3>
+<div class="fl"><span class="fs">[삭제]</span><span class="fa">→</span><span class="fs">confirm</span><span class="fa">→</span><span class="fs">deleteLog에 스냅샷</span><span class="fa">→</span><span class="fs">EVTS에서 제거</span><span class="fa">→</span><span class="fs">히스토리</span><span class="fa">→</span><span class="fs">save</span><span class="fa">→</span><span class="fs">모달닫힘</span><span class="fa">→</span><span class="fs">renderCal</span></div>
+</div>
+
+<div class="ss"><h3>15.4 닉네임 변경</h3>
+<div class="fl"><span class="fs">설정→닉네임</span><span class="fa">→</span><span class="fs">팝업</span><span class="fa">→</span><span class="fs">입력→저장</span><span class="fa">→</span><span class="fs">U.name 변경</span><span class="fa">→</span><span class="fs">CAL.members 갱신</span><span class="fa">→</span><span class="fs">모든 댓글.name 갱신</span><span class="fa">→</span><span class="fs">save</span><span class="fa">→</span><span class="fs">renderStg+renderCal</span></div>
+</div>
+
+<div class="ss"><h3>15.5 .ics 익스포트</h3>
+<div class="fl"><span class="fs">설정→내보내기</span><span class="fa">→</span><span class="fs">EVTS 순회</span><span class="fa">→</span><span class="fs">VEVENT 변환</span><span class="fa">→</span><span class="fs">RRULE+VALARM 매핑</span><span class="fa">→</span><span class="fs">Blob→download</span></div>
+</div>
+</div>
+
+<!-- 16 -->
+<div class="s" id="s16">
+<div class="sh"><span class="sn">16</span><h2>타이틀 이미지 규칙</h2></div>
+<div class="ss">
+<table>
+<tr><th>기간</th><th>이미지</th></tr>
+<tr><td>~ 2034.4.9</td><td>temp/title_img.png</td></tr>
+<tr><td>2034.4.10 ~ 2046.4.9</td><td>temp/title_img_2.png</td></tr>
+<tr><td>2046.4.10 ~</td><td>temp/title_img_3.png</td></tr>
+</table>
+<p style="font-size:12px;margin-top:6px">온보딩 화면 로드 시 현재 날짜로 판별하여 자동 적용</p>
+</div>
+</div>
+
+</div>
+</body>
+</html>

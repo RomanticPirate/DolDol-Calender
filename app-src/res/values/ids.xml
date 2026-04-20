@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item type="id" name="widget_root" />
+    <item type="id" name="widget_today_btn" />
+    <item type="id" name="widget_title" />
+    <item type="id" name="widget_settings_btn" />
+    <item type="id" name="widget_add_btn" />
+    <item type="id" name="widget_list" />
+    <item type="id" name="widget_empty" />
+    <item type="id" name="week_dates_row" />
+    <item type="id" name="day0" />
+    <item type="id" name="day1" />
+    <item type="id" name="day2" />
+    <item type="id" name="day3" />
+    <item type="id" name="day4" />
+    <item type="id" name="day5" />
+    <item type="id" name="day6" />
+    <item type="id" name="evt_row0" />
+    <item type="id" name="evt0_0" />
+    <item type="id" name="evt0_1" />
+    <item type="id" name="evt0_2" />
+    <item type="id" name="evt0_3" />
+    <item type="id" name="evt0_4" />
+    <item type="id" name="evt0_5" />
+    <item type="id" name="evt0_6" />
+    <item type="id" name="evt_row1" />
+    <item type="id" name="evt1_0" />
+    <item type="id" name="evt1_1" />
+    <item type="id" name="evt1_2" />
+    <item type="id" name="evt1_3" />
+    <item type="id" name="evt1_4" />
+    <item type="id" name="evt1_5" />
+    <item type="id" name="evt1_6" />
+</resources>

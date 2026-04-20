@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="wrap_content" android:paddingTop="2.0dip" android:paddingBottom="2.0dip"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Date numbers row -->
+    <LinearLayout android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="wrap_content" android:id="@id/week_dates_row">
+        <TextView android:textSize="11.0sp" android:gravity="center" android:id="@id/day0" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" />
+        <TextView android:textSize="11.0sp" android:gravity="center" android:id="@id/day1" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" />
+        <TextView android:textSize="11.0sp" android:gravity="center" android:id="@id/day2" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" />
+        <TextView android:textSize="11.0sp" android:gravity="center" android:id="@id/day3" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" />
+        <TextView android:textSize="11.0sp" android:gravity="center" android:id="@id/day4" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" />
+        <TextView android:textSize="11.0sp" android:gravity="center" android:id="@id/day5" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" />
+        <TextView android:textSize="11.0sp" android:gravity="center" android:id="@id/day6" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" />
+    </LinearLayout>
+    <!-- Event labels (up to 3 rows) -->
+    <LinearLayout android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="wrap_content" android:id="@id/evt_row0" android:visibility="gone">
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt0_0" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt0_1" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt0_2" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt0_3" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt0_4" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt0_5" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt0_6" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+    </LinearLayout>
+    <LinearLayout android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="wrap_content" android:id="@id/evt_row1" android:visibility="gone">
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt1_0" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt1_1" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt1_2" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt1_3" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt1_4" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt1_5" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+        <TextView android:textSize="9.0sp" android:gravity="center" android:id="@id/evt1_6" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:singleLine="true" />
+    </LinearLayout>
+    <!-- Divider -->
+    <FrameLayout android:background="#08000000" android:layout_width="fill_parent" android:layout_height="1.0dip" android:layout_marginTop="2.0dip" />
+</LinearLayout>

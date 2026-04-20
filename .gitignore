@@ -1,0 +1,5 @@
+app-src/build/
+app-unsigned.apk
+app-unsigned-aligned-debugSigned.apk
+app-aligned-signed.apk.idsig
+*.idsig
