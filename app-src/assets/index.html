@@ -259,7 +259,7 @@ else img.src='temp/title_img_1.png';})();
 <div class="topbar">
 <div class="topbar-title" id="topbar-title"><img src="temp/앱아이콘.png" alt=""> 돌돌 캘린더</div>
 <div class="topbar-right">
-<button class="tb-btn" onclick="testAlarm()" title="[테스트] 5초 후 알람" style="background:#FFE8E8;color:var(--dg);font-size:11px">🔔TEST</button>
+<button class="tb-btn" onclick="testAlarm()" title="[테스트] 5초 후 일정 추가 알람" style="display:none;background:#FFE8E8;color:var(--dg);font-size:11px">🔔TEST</button>
 <button class="my-sw" id="my-sw" onclick="toggleMy()" title="내 일정만 보기"></button>
 <button class="tb-btn" onclick="openPopup('hist-popup')" title="히스토리">📜</button>
 <button class="tb-btn" onclick="openPopup('stg-popup')" title="설정">⚙️</button>
@@ -574,6 +574,25 @@ function startListeners(){
       if(re.deleted)return;
       if(deletedIds.has(re.id))return;
       const local=localMap.get(re.id);
+
+      // 알람 트리거: 다른 사람이 나를 참여자로 추가/생성한 일정
+      try{
+        const newTgts=re.targets||[];
+        const isMine=re.createdBy===U?.id;
+        const isMeIn=newTgts.includes('all')||newTgts.includes(U?.id);
+        if(!isMine&&isMeIn){
+          if(!local){
+            notifyEventAdded(re,'new');
+          }else{
+            const oldTgts=local.targets||[];
+            const wasMeIn=oldTgts.includes('all')||oldTgts.includes(U?.id);
+            if(toMs(re.updatedAt)>toMs(local.updatedAt)&&!wasMeIn){
+              notifyEventAdded(re,'added');
+            }
+          }
+        }
+      }catch(ex){console.warn('notify check:',ex)}
+
       if(!local){
         merged.push(re);
       }else{
@@ -1266,15 +1285,31 @@ function exportICS(){if(!EVTS.length){toast('내보낼 일정 없음');return}le
 document.querySelectorAll('.popup-overlay,.modal-overlay,.djump-overlay,.sp-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show')})});
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
 
-// === [테스트용] 알람 테스트 — 배포 시 제거 ===
+// === [테스트용] 일정 추가 알람 테스트 — 배포 시 제거 ===
 function testAlarm(){
-  toast('5초 후 알람 테스트...');
+  toast('5초 후 일정 추가 알람 테스트...');
+  const title='📅 새 일정 추가됨';
+  const msg='⌚ 팀 회식 · 19:00~21:00';
   if(window.CalBridge&&window.CalBridge.testAlarm){
-    window.CalBridge.testAlarm('⌚ 팀 미팅','09:00~10:00 · 1시간 전 알림',5000);
+    window.CalBridge.testAlarm(title,msg,5000);
   }else{
-    // 브라우저 fallback
-    setTimeout(()=>alert('🔔 알람 테스트!\n\n📅 돌돌 캘린더\n⌚ 팀 미팅 (09:00~10:00)\n1시간 전 알림\n\n(APK에서만 상태바 알림 동작)'),5000)
+    setTimeout(()=>alert('🔔 '+title+'\n\n'+msg+'\n\n(APK에서만 상태바 알림 동작)'),5000)
   }
+}
+function notifyEventAdded(e,reason){
+  if(!firstSyncDone)return;
+  if(!U||!e)return;
+  const title='📅 새 일정 추가됨';
+  const evtTitle=e.title||'제목 없음';
+  const ic=e.catIcon||'📅';
+  const tm=e.isAllDay?'종일':`${e.startTime||''}${e.endTime?'~'+e.endTime:''}`;
+  const msg=`${ic} ${evtTitle} · ${tm}`;
+  try{
+    if(window.CalBridge&&window.CalBridge.testAlarm){
+      window.CalBridge.testAlarm(title,msg,500);
+    }
+  }catch(ex){console.warn('notify err:',ex)}
+  addN('🔔',`${evtTitle} - ${reason==='added'?'참여자 추가':'새 일정'}`);
 }
 // === [테스트용 끝] ===
 // left/right swipe for month change
