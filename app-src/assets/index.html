@@ -512,7 +512,12 @@ async function saveEventToFS(evt){
 
 async function deleteEventFromFS(evtId){
   if(!fbReady||!db||!CAL||!CAL.fsId)return;
-  await db.collection('calendars').doc(CAL.fsId).collection('events').doc(evtId).delete();
+  // Soft-delete: mark with deletedBy so other clients can show "deleted by X" notification
+  await db.collection('calendars').doc(CAL.fsId).collection('events').doc(evtId).set({
+    deleted:true,
+    deletedBy:U?.id||'',
+    deletedAt:new Date().toISOString()
+  },{merge:true});
 }
 
 async function saveCatToFS(cat){
@@ -571,23 +576,45 @@ function startListeners(){
 
     // 1. Remote 일정 처리
     remote.forEach(re=>{
-      if(re.deleted)return;
-      if(deletedIds.has(re.id))return;
       const local=localMap.get(re.id);
 
-      // 알람 트리거: 다른 사람이 나를 참여자로 추가/생성한 일정
+      // 소프트 삭제 처리
+      if(re.deleted){
+        try{
+          if(local&&re.deletedBy&&re.deletedBy!==U?.id&&!deletedIds.has(re.id)){
+            const tgts=local.targets||['all'];
+            if(tgts.includes('all')||tgts.includes(U?.id)){
+              notifyEventChange(local,'deleted',re.deletedBy);
+            }
+            addDeletedId(re.id);
+          }
+        }catch(ex){console.warn('del notify:',ex)}
+        return;
+      }
+
+      if(deletedIds.has(re.id))return;
+
+      // 알람 트리거: 다른 사람이 추가/수정한 일정
       try{
         const newTgts=re.targets||[];
-        const isMine=re.createdBy===U?.id;
         const isMeIn=newTgts.includes('all')||newTgts.includes(U?.id);
-        if(!isMine&&isMeIn){
-          if(!local){
-            notifyEventAdded(re,'new');
-          }else{
+        if(!local){
+          if(isMeIn&&re.createdBy!==U?.id){
+            notifyEventChange(re,'new',re.createdBy);
+          }
+        }else{
+          const rt=toMs(re.updatedAt);
+          const lt=toMs(local.updatedAt);
+          if(rt>lt){
             const oldTgts=local.targets||[];
             const wasMeIn=oldTgts.includes('all')||oldTgts.includes(U?.id);
-            if(toMs(re.updatedAt)>toMs(local.updatedAt)&&!wasMeIn){
-              notifyEventAdded(re,'added');
+            const updater=re.updatedBy||re.createdBy;
+            if(updater!==U?.id&&(wasMeIn||isMeIn)){
+              if(!wasMeIn&&isMeIn){
+                notifyEventChange(re,'new',updater);
+              }else{
+                notifyEventChange(re,'modified',updater);
+              }
             }
           }
         }
@@ -852,7 +879,21 @@ async function joinOB(){
 }
 
 function gotoMonth(y,m,d,eid){curY=y;curM=m;if(!isNaN(d)&&d>0){try{selDate=fmt(new Date(y,m,d))}catch(e){}}if(typeof renderCal==='function')renderCal();if(typeof fH==='function')fH(curY,curM);if(eid){setTimeout(()=>{try{if(typeof showDet==='function')showDet(eid)}catch(e){}},120)}}
-function init(){const n=new Date();curY=n.getFullYear();curM=n.getMonth();selDate=fmt(n);let pEid=null,pD_=NaN;try{const p=new URLSearchParams(location.search);const py=parseInt(p.get('y'));const pm=parseInt(p.get('m'));pD_=parseInt(p.get('d'));pEid=p.get('eid');if(!isNaN(py)&&!isNaN(pm)){curY=py;curM=pm;if(!isNaN(pD_)&&pD_>0){selDate=fmt(new Date(py,pm,pD_))}}}catch(e){}if(myOnly)document.getElementById('my-sw').classList.add('on');renderCal();fH(curY,curM);if(pEid){setTimeout(()=>{try{if(typeof showDet==='function')showDet(pEid)}catch(e){}},150)}}
+async function wipeMyCalendar(){
+  if(!CAL||!CAL.fsId||!db){console.warn('wipe: no calendar to wipe');return false}
+  const fsId=CAL.fsId;const calRef=db.collection('calendars').doc(fsId);
+  try{
+    for(const sub of ['events','categories','notifications','members']){
+      const snap=await calRef.collection(sub).get();
+      const ps=[];snap.forEach(d=>ps.push(d.ref.delete()));
+      await Promise.all(ps);
+    }
+    await calRef.delete();
+    console.log('Firestore calendar wiped:',fsId);
+    return true;
+  }catch(e){console.warn('wipe error:',e);return false}
+}
+function init(){const n=new Date();curY=n.getFullYear();curM=n.getMonth();selDate=fmt(n);let pEid=null,pD_=NaN,pWipe=false;try{const p=new URLSearchParams(location.search);const py=parseInt(p.get('y'));const pm=parseInt(p.get('m'));pD_=parseInt(p.get('d'));pEid=p.get('eid');pWipe=p.get('wipe')==='1';if(!isNaN(py)&&!isNaN(pm)){curY=py;curM=pm;if(!isNaN(pD_)&&pD_>0){selDate=fmt(new Date(py,pm,pD_))}}}catch(e){}if(myOnly)document.getElementById('my-sw').classList.add('on');renderCal();fH(curY,curM);if(pEid){setTimeout(()=>{try{if(typeof showDet==='function')showDet(pEid)}catch(e){}},150)}if(pWipe){setTimeout(()=>{wipeMyCalendar().then(ok=>{console.log('wipe done:',ok);try{document.title='WIPE_DONE'}catch(e){}})},2500)}}
 function toggleMy(){myOnly=!myOnly;localStorage.setItem('dd_myonly',myOnly);document.getElementById('my-sw').classList.toggle('on',myOnly);renderCal()}
 
 // Get events
@@ -962,6 +1003,7 @@ function renderStg(){
 <div class="stg-section"><div class="stg-title">캘린더</div>
 <div class="stg-item"><div class="stg-left"><span class="stg-icon">📅</span><span class="stg-label">${CAL?.name||''}</span></div><span class="stg-val">${CAL?.members.length||0}명</span></div>
 <div class="stg-item"><div class="stg-left"><span class="stg-icon">👥</span><span class="stg-label">멤버</span></div><span class="stg-val">${CAL?.members.map(m=>m.name).join(', ')||''}</span></div>
+<div class="stg-item" onclick="downloadApk()"><div class="stg-left"><span class="stg-icon">📥</span><span class="stg-label">APK 다운로드 하기</span></div><button class="btn-save" onclick="event.stopPropagation();downloadApk()" style="flex:0 0 auto;font-size:11px;padding:6px 10px;width:auto;min-width:0;border-radius:8px;font-weight:500">받기</button></div>
 <div class="stg-item" onclick="copyApkLink()"><div class="stg-left"><span class="stg-icon">📥</span><span class="stg-label">APK 다운로드 링크 복사</span></div><span class="stg-val">📋</span></div>
 <div class="stg-item" onclick="navigator.clipboard?.writeText(CAL?.inviteCode||'').then(()=>toast('초대 코드 복사됨'))"><div class="stg-left"><span class="stg-icon">🔗</span><span class="stg-label">초대 코드</span></div><span class="stg-val">${CAL?.inviteCode||''} 📋</span></div>
 <div class="stg-item" onclick="openCatMgr()"><div class="stg-left"><span class="stg-icon">🏷️</span><span class="stg-label">카테고리</span></div><span class="stg-val">${CATS.length}개 ▶</span></div></div>
@@ -974,6 +1016,15 @@ const APK_DOWNLOAD_URL='https://github.com/RomanticPirate/DolDol-Calender/releas
 function copyApkLink(){
   const msg=`📅 돌돌 캘린더 앱 다운로드\n${APK_DOWNLOAD_URL}\n\n안드로이드 폰에서 링크를 열어 설치하세요.`;
   navigator.clipboard?.writeText(msg).then(()=>toast('다운로드 링크 복사됨')).catch(()=>toast('복사 실패'));
+}
+function downloadApk(){
+  if(window.CalBridge&&window.CalBridge.downloadApk){
+    try{window.CalBridge.downloadApk(APK_DOWNLOAD_URL);toast('다운로드 시작 — 알림 확인')}catch(e){toast('다운로드 실패')}
+  }else if(window.CalBridge&&window.CalBridge.openUrl){
+    try{window.CalBridge.openUrl(APK_DOWNLOAD_URL)}catch(e){toast('다운로드 실패')}
+  }else{
+    window.open(APK_DOWNLOAD_URL,'_blank');
+  }
 }
 
 // Nickname
@@ -1192,7 +1243,8 @@ function doSave(){
   const tgtIsAll=tgtAllItem?.classList.contains('checked');
   const targets=[];if(tgtIsAll){targets.push('all')}else{document.querySelectorAll('#ef-tgt [data-mid]').forEach(el=>{if(el.classList.contains('checked'))targets.push(el.dataset.mid)})}
   const ft=targets.length?targets:['all'];
-  const ed={id:editId||gid(),calendarId:CAL.fsId||CAL.id,title,date,endDate:document.getElementById('ef-end').value||date,startTime:isAll?null:getSTVal(),endTime:isAll?null:getETVal(),isAllDay:isAll,repeat:document.getElementById('ef-rep').value,repeatScope:__repScope,color,catIcon,memo:document.getElementById('ef-memo').value,targets:ft,alarms,customAlarms:[...customAlarms],createdBy:U.id,comments:editId?(EVTS.find(e=>e.id===editId)?.comments||[]):[],createdAt:editId?(EVTS.find(e=>e.id===editId)?.createdAt||fmt(new Date())):fmt(new Date()),updatedAt:new Date().toISOString()};
+  const __existingEvt=editId?EVTS.find(e=>e.id===editId):null;
+  const ed={id:editId||gid(),calendarId:CAL.fsId||CAL.id,title,date,endDate:document.getElementById('ef-end').value||date,startTime:isAll?null:getSTVal(),endTime:isAll?null:getETVal(),isAllDay:isAll,repeat:document.getElementById('ef-rep').value,repeatScope:__repScope,color,catIcon,memo:document.getElementById('ef-memo').value,targets:ft,alarms,customAlarms:[...customAlarms],createdBy:__existingEvt?.createdBy||U.id,updatedBy:U.id,comments:__existingEvt?.comments||[],createdAt:__existingEvt?.createdAt||fmt(new Date()),updatedAt:new Date().toISOString()};
   if(editId){EVTS[EVTS.findIndex(e=>e.id===editId)]=ed;addN('✏️',`"${title}" 수정됨`)}else{EVTS.push(ed);addN('📅',`"${title}" 추가됨`)}
   save();
   // Sync event to Firestore
@@ -1296,10 +1348,14 @@ function testAlarm(){
     setTimeout(()=>alert('🔔 '+title+'\n\n'+msg+'\n\n(APK에서만 상태바 알림 동작)'),5000)
   }
 }
-function notifyEventAdded(e,reason){
+function notifyEventChange(e,action,byUserId){
   if(!firstSyncDone)return;
   if(!U||!e)return;
-  const title='📅 새 일정 추가됨';
+  if(byUserId===U.id)return;
+  const titles={new:'📅 새 일정 추가됨',modified:'✏️ 일정 수정됨',deleted:'🗑️ 일정 삭제됨'};
+  const baseTitle=titles[action]||'📅 일정 알림';
+  const byName=byUserId?gMN(byUserId):'';
+  const title=baseTitle+(byName?` (by ${byName})`:'');
   const evtTitle=e.title||'제목 없음';
   const ic=e.catIcon||'📅';
   const tm=e.isAllDay?'종일':`${e.startTime||''}${e.endTime?'~'+e.endTime:''}`;
@@ -1309,7 +1365,7 @@ function notifyEventAdded(e,reason){
       window.CalBridge.testAlarm(title,msg,500);
     }
   }catch(ex){console.warn('notify err:',ex)}
-  addN('🔔',`${evtTitle} - ${reason==='added'?'참여자 추가':'새 일정'}`);
+  addN('🔔',`${evtTitle} - ${action}`);
 }
 // === [테스트용 끝] ===
 // left/right swipe for month change

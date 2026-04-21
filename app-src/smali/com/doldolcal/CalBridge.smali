@@ -368,6 +368,80 @@
     return-void
 .end method
 
+# downloadApk(url) — uses DownloadManager to download APK directly (no browser)
+.method public downloadApk(Ljava/lang/String;)V
+    .locals 7
+    .annotation runtime Landroid/webkit/JavascriptInterface;
+    .end annotation
+
+    :try_dl_s
+    iget-object v0, p0, Lcom/doldolcal/CalBridge;->mContext:Landroid/content/Context;
+    const-string v1, "download"
+    invoke-virtual {v0, v1}, Landroid/content/Context;->getSystemService(Ljava/lang/String;)Ljava/lang/Object;
+    move-result-object v0
+    check-cast v0, Landroid/app/DownloadManager;
+
+    new-instance v1, Landroid/app/DownloadManager$Request;
+    invoke-static {p1}, Landroid/net/Uri;->parse(Ljava/lang/String;)Landroid/net/Uri;
+    move-result-object v2
+    invoke-direct {v1, v2}, Landroid/app/DownloadManager$Request;-><init>(Landroid/net/Uri;)V
+
+    const-string v2, "돌돌 캘린더"
+    invoke-virtual {v1, v2}, Landroid/app/DownloadManager$Request;->setTitle(Ljava/lang/CharSequence;)Landroid/app/DownloadManager$Request;
+
+    const-string v2, "APK 다운로드 중..."
+    invoke-virtual {v1, v2}, Landroid/app/DownloadManager$Request;->setDescription(Ljava/lang/CharSequence;)Landroid/app/DownloadManager$Request;
+
+    const/4 v2, 0x1
+    invoke-virtual {v1, v2}, Landroid/app/DownloadManager$Request;->setNotificationVisibility(I)Landroid/app/DownloadManager$Request;
+
+    const-string v2, "application/vnd.android.package-archive"
+    invoke-virtual {v1, v2}, Landroid/app/DownloadManager$Request;->setMimeType(Ljava/lang/String;)Landroid/app/DownloadManager$Request;
+
+    sget-object v3, Landroid/os/Environment;->DIRECTORY_DOWNLOADS:Ljava/lang/String;
+    const-string v4, "doldol-calendar.apk"
+    invoke-virtual {v1, v3, v4}, Landroid/app/DownloadManager$Request;->setDestinationInExternalPublicDir(Ljava/lang/String;Ljava/lang/String;)Landroid/app/DownloadManager$Request;
+
+    invoke-virtual {v0, v1}, Landroid/app/DownloadManager;->enqueue(Landroid/app/DownloadManager$Request;)J
+    move-result-wide v5
+    :try_dl_e
+    .catch Ljava/lang/Exception; {:try_dl_s .. :try_dl_e} :_dl_catch
+    return-void
+
+    :_dl_catch
+    move-exception v0
+    return-void
+.end method
+
+# openUrl(url) — opens external browser to download APK or open link
+.method public openUrl(Ljava/lang/String;)V
+    .locals 3
+    .annotation runtime Landroid/webkit/JavascriptInterface;
+    .end annotation
+
+    :try_o_s
+    new-instance v0, Landroid/content/Intent;
+    const-string v1, "android.intent.action.VIEW"
+    invoke-direct {v0, v1}, Landroid/content/Intent;-><init>(Ljava/lang/String;)V
+
+    invoke-static {p1}, Landroid/net/Uri;->parse(Ljava/lang/String;)Landroid/net/Uri;
+    move-result-object v1
+    invoke-virtual {v0, v1}, Landroid/content/Intent;->setData(Landroid/net/Uri;)Landroid/content/Intent;
+
+    const/high16 v1, 0x10000000
+    invoke-virtual {v0, v1}, Landroid/content/Intent;->setFlags(I)Landroid/content/Intent;
+
+    iget-object v1, p0, Lcom/doldolcal/CalBridge;->mContext:Landroid/content/Context;
+    invoke-virtual {v1, v0}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+    :try_o_e
+    .catch Ljava/lang/Exception; {:try_o_s .. :try_o_e} :_o_catch
+    return-void
+
+    :_o_catch
+    move-exception v0
+    return-void
+.end method
+
 # setWidgetEvents(monthKey, data) — saves events data for widget, triggers refresh
 .method public setWidgetEvents(Ljava/lang/String;Ljava/lang/String;)V
     .locals 6

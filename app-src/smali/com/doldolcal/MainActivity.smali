@@ -9,6 +9,62 @@
     return-void
 .end method
 
+.method protected onResume()V
+    .locals 8
+
+    invoke-super {p0}, Landroid/app/Activity;->onResume()V
+
+    iget-object v0, p0, Lcom/doldolcal/MainActivity;->mWebView:Landroid/webkit/WebView;
+    if-eqz v0, :_or_end
+
+    :_or_try_s
+    invoke-virtual {p0}, Landroid/app/Activity;->getPackageManager()Landroid/content/pm/PackageManager;
+    move-result-object v1
+    invoke-virtual {p0}, Landroid/app/Activity;->getPackageName()Ljava/lang/String;
+    move-result-object v6
+    const/4 v7, 0x0
+    invoke-virtual {v1, v6, v7}, Landroid/content/pm/PackageManager;->getPackageInfo(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;
+    move-result-object v1
+    iget-wide v2, v1, Landroid/content/pm/PackageInfo;->lastUpdateTime:J
+
+    const-string v1, "app_state"
+    const/4 v6, 0x0
+    invoke-virtual {p0, v1, v6}, Landroid/content/Context;->getSharedPreferences(Ljava/lang/String;I)Landroid/content/SharedPreferences;
+    move-result-object v1
+
+    const-string v6, "last_update_time"
+    const-wide/16 v4, 0x0
+    invoke-interface {v1, v6, v4, v5}, Landroid/content/SharedPreferences;->getLong(Ljava/lang/String;J)J
+    move-result-wide v4
+
+    cmp-long v6, v2, v4
+    if-eqz v6, :_or_unchanged
+
+    invoke-interface {v1}, Landroid/content/SharedPreferences;->edit()Landroid/content/SharedPreferences$Editor;
+    move-result-object v1
+    const-string v6, "last_update_time"
+    invoke-interface {v1, v6, v2, v3}, Landroid/content/SharedPreferences$Editor;->putLong(Ljava/lang/String;J)Landroid/content/SharedPreferences$Editor;
+    invoke-interface {v1}, Landroid/content/SharedPreferences$Editor;->commit()Z
+
+    const-wide/16 v6, 0x0
+    cmp-long v1, v4, v6
+    if-eqz v1, :_or_unchanged
+
+    const-string v1, "file:///android_asset/index.html"
+    invoke-virtual {v0, v1}, Landroid/webkit/WebView;->loadUrl(Ljava/lang/String;)V
+
+    :_or_unchanged
+    :_or_try_e
+    .catch Ljava/lang/Exception; {:_or_try_s .. :_or_try_e} :_or_catch
+
+    :_or_end
+    return-void
+
+    :_or_catch
+    move-exception v0
+    return-void
+.end method
+
 .method protected onNewIntent(Landroid/content/Intent;)V
     .locals 10
 
@@ -121,28 +177,47 @@
     invoke-virtual {v3, v7}, Landroid/content/Intent;->getStringExtra(Ljava/lang/String;)Ljava/lang/String;
     move-result-object v7
 
+    const-string v2, "do_wipe"
+    const/4 v1, 0x0
+    invoke-virtual {v3, v2, v1}, Landroid/content/Intent;->getBooleanExtra(Ljava/lang/String;Z)Z
+    move-result v1
+
     new-instance v3, Ljava/lang/StringBuilder;
     invoke-direct {v3}, Ljava/lang/StringBuilder;-><init>()V
     const-string v2, "file:///android_asset/index.html"
     invoke-virtual {v3, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
-    const/4 v2, -0x1
-    if-eq v4, v2, :no_ym
-    if-eq v5, v2, :no_ym
-    const-string v2, "?y="
+
+    const/4 v2, 0x0
+    if-eqz v1, :_no_wipe_q
+    const-string v2, "?wipe=1"
     invoke-virtual {v3, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    const/4 v2, 0x1
+    :_no_wipe_q
+    # v2 = 1 if wipe param already added (need '&' for next), else 0
+
+    const/4 v1, -0x1
+    if-eq v4, v1, :no_ym
+    if-eq v5, v1, :no_ym
+    if-eqz v2, :_first_q
+    const-string v1, "&y="
+    goto :_y_pfx
+    :_first_q
+    const-string v1, "?y="
+    :_y_pfx
+    invoke-virtual {v3, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
     invoke-virtual {v3, v4}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
-    const-string v2, "&m="
-    invoke-virtual {v3, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    const-string v1, "&m="
+    invoke-virtual {v3, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
     invoke-virtual {v3, v5}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
-    const/4 v2, -0x1
-    if-eq v6, v2, :no_d
-    const-string v2, "&d="
-    invoke-virtual {v3, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    const/4 v1, -0x1
+    if-eq v6, v1, :no_d
+    const-string v1, "&d="
+    invoke-virtual {v3, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
     invoke-virtual {v3, v6}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
     :no_d
     if-eqz v7, :no_eid
-    const-string v2, "&eid="
-    invoke-virtual {v3, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    const-string v1, "&eid="
+    invoke-virtual {v3, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
     invoke-virtual {v3, v7}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
     :no_eid
     :no_ym
