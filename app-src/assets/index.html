@@ -798,7 +798,8 @@ async function joinOB(){
   }catch(e){console.error(e);toast('참여 실패: '+e.message);document.getElementById('ob-loading').style.display='none'}
 }
 
-function init(){const n=new Date();curY=n.getFullYear();curM=n.getMonth();selDate=fmt(n);if(myOnly)document.getElementById('my-sw').classList.add('on');renderCal();fH(curY,curM)}
+function gotoMonth(y,m){curY=y;curM=m;if(typeof renderCal==='function')renderCal();if(typeof fH==='function')fH(curY,curM)}
+function init(){const n=new Date();curY=n.getFullYear();curM=n.getMonth();try{const p=new URLSearchParams(location.search);const py=parseInt(p.get('y'));const pm=parseInt(p.get('m'));if(!isNaN(py)&&!isNaN(pm)){curY=py;curM=pm}}catch(e){}selDate=fmt(n);if(myOnly)document.getElementById('my-sw').classList.add('on');renderCal();fH(curY,curM)}
 function toggleMy(){myOnly=!myOnly;localStorage.setItem('dd_myonly',myOnly);document.getElementById('my-sw').classList.toggle('on',myOnly);renderCal()}
 
 // Get events
@@ -842,7 +843,22 @@ function renderCal(){
     grid.appendChild(cell);
   });
   body.appendChild(grid);
-  renderDP()
+  renderDP();
+  // Save events for widget
+  try{
+    if(window.CalBridge&&window.CalBridge.setWidgetEvents){
+      const mk=curY+'-'+String(curM+1).padStart(2,'0');
+      const lines=[];
+      EVTS.forEach(e=>{
+        if(!e.date||!e.date.startsWith(mk))return;
+        let col='#5B6AFF';
+        if(e.categoryId){const c=(CATS||[]).find(x=>x.id===e.categoryId);if(c&&c.color)col=c.color}
+        const t=String(e.title||'').replace(/[\|\n]/g,' ').slice(0,20);
+        lines.push(e.date+'|'+t+'|'+col);
+      });
+      window.CalBridge.setWidgetEvents(mk,lines.join('\n'));
+    }
+  }catch(ex){}
 }
 
 function renderDP(){

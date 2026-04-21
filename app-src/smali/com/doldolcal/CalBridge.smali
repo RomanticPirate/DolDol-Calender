@@ -367,3 +367,51 @@
     move-exception v0
     return-void
 .end method
+
+# setWidgetEvents(monthKey, data) — saves events data for widget, triggers refresh
+.method public setWidgetEvents(Ljava/lang/String;Ljava/lang/String;)V
+    .locals 6
+    .annotation runtime Landroid/webkit/JavascriptInterface;
+    .end annotation
+
+    :try_s
+    iget-object v0, p0, Lcom/doldolcal/CalBridge;->mContext:Landroid/content/Context;
+    const-string v1, "widget_prefs"
+    const/4 v2, 0x0
+    invoke-virtual {v0, v1, v2}, Landroid/content/Context;->getSharedPreferences(Ljava/lang/String;I)Landroid/content/SharedPreferences;
+    move-result-object v1
+
+    invoke-interface {v1}, Landroid/content/SharedPreferences;->edit()Landroid/content/SharedPreferences$Editor;
+    move-result-object v1
+
+    new-instance v2, Ljava/lang/StringBuilder;
+    invoke-direct {v2}, Ljava/lang/StringBuilder;-><init>()V
+    const-string v3, "events_"
+    invoke-virtual {v2, v3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    invoke-virtual {v2, p1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    invoke-virtual {v2}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+    move-result-object v2
+
+    invoke-interface {v1, v2, p2}, Landroid/content/SharedPreferences$Editor;->putString(Ljava/lang/String;Ljava/lang/String;)Landroid/content/SharedPreferences$Editor;
+    invoke-interface {v1}, Landroid/content/SharedPreferences$Editor;->commit()Z
+
+    # Broadcast update
+    new-instance v1, Landroid/content/Intent;
+    const-string v2, "android.appwidget.action.APPWIDGET_UPDATE"
+    invoke-direct {v1, v2}, Landroid/content/Intent;-><init>(Ljava/lang/String;)V
+
+    new-instance v2, Landroid/content/ComponentName;
+    const-class v3, Lcom/doldolcal/CalWidgetProvider;
+    invoke-direct {v2, v0, v3}, Landroid/content/ComponentName;-><init>(Landroid/content/Context;Ljava/lang/Class;)V
+    invoke-virtual {v1, v2}, Landroid/content/Intent;->setComponent(Landroid/content/ComponentName;)Landroid/content/Intent;
+
+    invoke-virtual {v0, v1}, Landroid/content/Context;->sendBroadcast(Landroid/content/Intent;)V
+    :try_e
+    .catch Ljava/lang/Exception; {:try_s .. :try_e} :c
+
+    return-void
+
+    :c
+    move-exception v0
+    return-void
+.end method
