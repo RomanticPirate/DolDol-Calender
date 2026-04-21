@@ -21,7 +21,11 @@
     <!-- Divider -->
     <FrameLayout android:background="#10000000" android:layout_width="fill_parent" android:layout_height="1.0dip" />
     <!-- Calendar list -->
-    <ListView android:id="@id/widget_list" android:layout_width="fill_parent" android:layout_height="0.0dip" android:layout_weight="1.0" android:divider="@null" android:dividerHeight="0.0dip" android:listSelector="@android:color/transparent" />
+    <ListView android:id="@id/widget_list" android:layout_width="fill_parent" android:layout_height="0.0dip" android:layout_weight="2.0" android:divider="@null" android:dividerHeight="0.0dip" android:listSelector="@android:color/transparent" />
+    <!-- Divider between calendar and event list -->
+    <FrameLayout android:background="#20000000" android:layout_width="fill_parent" android:layout_height="1.0dip" android:layout_marginTop="4.0dip" android:layout_marginBottom="2.0dip" />
+    <!-- Upcoming events scrollable list -->
+    <ListView android:id="@id/widget_evt_list" android:layout_width="fill_parent" android:layout_height="0.0dip" android:layout_weight="1.0" android:divider="@null" android:dividerHeight="0.0dip" android:listSelector="@android:color/transparent" />
     <!-- Empty state -->
     <TextView android:textSize="12.0sp" android:textColor="#ff999999" android:gravity="center" android:id="@id/widget_empty" android:paddingTop="12.0dip" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="돌돌 캘린더를 시작해보세요" android:visibility="gone" />
 </LinearLayout>

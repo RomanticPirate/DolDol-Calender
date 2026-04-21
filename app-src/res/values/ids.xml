@@ -31,4 +31,33 @@
     <item type="id" name="evt1_4" />
     <item type="id" name="evt1_5" />
     <item type="id" name="evt1_6" />
+    <item type="id" name="widget_evt_list" />
+    <item type="id" name="widget_evt_bar" />
+    <item type="id" name="widget_evt_date" />
+    <item type="id" name="widget_evt_title" />
+    <item type="id" name="evt_row2" />
+    <item type="id" name="evt2_0" />
+    <item type="id" name="evt2_1" />
+    <item type="id" name="evt2_2" />
+    <item type="id" name="evt2_3" />
+    <item type="id" name="evt2_4" />
+    <item type="id" name="evt2_5" />
+    <item type="id" name="evt2_6" />
+    <item type="id" name="evt_row3" />
+    <item type="id" name="evt3_0" />
+    <item type="id" name="evt3_1" />
+    <item type="id" name="evt3_2" />
+    <item type="id" name="evt3_3" />
+    <item type="id" name="evt3_4" />
+    <item type="id" name="evt3_5" />
+    <item type="id" name="evt3_6" />
+    <item type="id" name="cell_0" />
+    <item type="id" name="cell_1" />
+    <item type="id" name="cell_2" />
+    <item type="id" name="cell_3" />
+    <item type="id" name="cell_4" />
+    <item type="id" name="cell_5" />
+    <item type="id" name="cell_6" />
+    <item type="id" name="widget_evt_meta" />
+    <item type="id" name="widget_evt_item_root" />
 </resources>

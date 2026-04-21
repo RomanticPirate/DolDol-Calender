@@ -44,7 +44,7 @@ body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:
 
 /* Calendar grid - FIXED HEIGHT CELLS */
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);padding:0 2px;gap:1px}
-.cal-cell{height:95px;display:flex;flex-direction:column;cursor:pointer;border-radius:4px;overflow:hidden;padding:1px;transition:background .1s;border:2px solid transparent}
+.cal-cell{height:78px;display:flex;flex-direction:column;cursor:pointer;border-radius:4px;overflow:hidden;padding:1px;transition:background .1s;border:2px solid transparent}
 .cal-cell:hover{background:#F0F0F8}
 .cal-cell.sel{background:var(--pl);border-color:var(--p)}
 .cal-cell.other{opacity:.2;pointer-events:none}
@@ -305,7 +305,7 @@ else img.src='temp/title_img_1.png';})();
 </div></div>
 </div>
 </div>
-<div class="fg"><label class="fl">🔄 반복</label><select class="fs" id="ef-rep"><option value="none">반복 없음</option><option value="daily">매일</option><option value="weekly">매주</option><option value="monthly">매월</option><option value="yearly">매년</option></select></div>
+<div class="fg"><label class="fl">🔄 반복</label><select class="fs" id="ef-rep" onchange="onRepChange(event)"><option value="none">반복 없음</option><option value="daily">매일</option><option value="weekly">매주</option><option value="monthly">매월</option><option value="yearly">매년</option></select></div>
 <hr class="form-divider">
 <div class="fg"><label class="fl">🔔 알림 <span class="info-icon" onclick="event.stopPropagation();this.classList.toggle('active')">i<span class="tooltip">일정 참가자에게만 알림이 갑니다.</span></span></label><div class="chk-group" id="ef-alarms"></div><div id="ef-cw" style="display:none"><div class="ca-row"><input type="number" id="ca-w" value="0" min="0"><span>주</span><input type="number" id="ca-d" value="0" min="0"><span>일</span><input type="number" id="ca-h" value="0" min="0"><span>시</span><input type="number" id="ca-m" value="0" min="0"><span>분 전</span><button class="ca-add" onclick="addCA()">+</button></div><div class="ca-list" id="ca-list"></div></div></div>
 <div class="fg"><label class="fl">👥 일정 참가자</label><div class="chk-group" id="ef-tgt"></div></div>
@@ -317,6 +317,36 @@ else img.src='temp/title_img_1.png';})();
 </div></div>
 <!-- DETAIL MODAL -->
 <div class="modal-overlay" id="det-modal"><div class="modal" id="det-content"></div></div>
+<!-- DELETE CONFIRM (non-repeating) -->
+<div class="modal-overlay" id="del-conf-modal" style="align-items:center;z-index:300">
+  <div style="background:var(--c);border-radius:14px;padding:22px;max-width:320px;width:85%;box-shadow:0 8px 24px rgba(0,0,0,.2)" onclick="event.stopPropagation()">
+    <div style="font-size:16px;font-weight:700;text-align:center;margin-bottom:6px;color:var(--t)" id="del-conf-title">일정 삭제</div>
+    <div style="font-size:13px;color:var(--ts);text-align:center;margin-bottom:18px;line-height:1.4" id="del-conf-msg">일정을 삭제하시겠습니까?</div>
+    <div style="display:flex;gap:8px">
+      <button style="flex:1;padding:12px;border:1px solid var(--bd);background:var(--c);color:var(--t);border-radius:10px;font-size:14px;cursor:pointer" onclick="cancelDel()">취소</button>
+      <button style="flex:1;padding:12px;border:none;background:var(--dg);color:#fff;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer" onclick="confirmDelSimple()">삭제</button>
+    </div>
+  </div>
+</div>
+<!-- DELETE SCOPE PICKER (repeating, no close) -->
+<div class="modal-overlay" id="del-scope-modal" style="align-items:center;z-index:300">
+  <div style="background:var(--c);border-radius:14px;padding:22px;max-width:340px;width:88%;box-shadow:0 8px 24px rgba(0,0,0,.2)" onclick="event.stopPropagation()">
+    <div style="font-size:16px;font-weight:700;text-align:center;margin-bottom:6px;color:var(--t)">반복 일정 삭제</div>
+    <div style="font-size:13px;color:var(--ts);text-align:center;margin-bottom:16px;line-height:1.4" id="del-scope-msg">어떻게 삭제할까요?</div>
+    <button style="width:100%;padding:13px;margin:5px 0;border:none;background:var(--p);color:#fff;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer" onclick="doDel('only')">해당 날짜의 일정만 삭제</button>
+    <button style="width:100%;padding:13px;margin:5px 0;border:1px solid var(--p);background:var(--c);color:var(--p);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer" onclick="doDel('future')">지금부터 이후 일정 삭제</button>
+    <button style="width:100%;padding:13px;margin:5px 0;border:1px solid var(--dg);background:var(--c);color:var(--dg);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer" onclick="doDel('all')">이전 일정 포함 전체 삭제</button>
+  </div>
+</div>
+<!-- REPEAT SCOPE PICKER (no close) -->
+<div class="modal-overlay" id="rep-scope-modal" style="align-items:center;z-index:300" onclick="event.stopPropagation()">
+  <div style="background:var(--c);border-radius:14px;padding:22px;max-width:320px;width:85%;box-shadow:0 8px 24px rgba(0,0,0,.2)" onclick="event.stopPropagation()">
+    <div style="font-size:16px;font-weight:700;text-align:center;margin-bottom:6px;color:var(--t)">반복 적용 범위</div>
+    <div style="font-size:13px;color:var(--ts);text-align:center;margin-bottom:18px;line-height:1.4">반복을 어떻게 적용할까요?</div>
+    <button style="width:100%;padding:14px;margin:6px 0;border:none;background:var(--p);color:#fff;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer" onclick="pickRepScope('forward')">이후 일정부터만 반복</button>
+    <button style="width:100%;padding:14px;margin:6px 0;border:1px solid var(--p);background:var(--c);color:var(--p);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer" onclick="pickRepScope('all')">이전 일정도 포함해서 반복</button>
+  </div>
+</div>
 <!-- DATE JUMP -->
 <div class="djump-overlay" id="dj-ov"><div class="djump" id="dj-c"></div></div>
 <!-- SMALL POPUPS -->
@@ -333,6 +363,9 @@ else img.src='temp/title_img_1.png';})();
 // === AESTHETIC COLORS (Instagram/감성 톤) ===
 const COLORS=['#FF6B6B','#FF9F9F','#FF9F43','#FECA57','#A8E6CF','#55EFC4','#48DBFB','#74B9FF','#5B6AFF','#A29BFE','#DDA0DD','#FF6B9D','#FDA7DF','#95A5A6','#636E72'];
 const REPEAT_N={none:'반복 없음',daily:'매일',weekly:'매주',monthly:'매월',yearly:'매년'};
+let __repScope='forward';
+function pickRepScope(s){__repScope=s;document.getElementById('rep-scope-modal').classList.remove('show')}
+function onRepChange(e){const v=e.target.value;if(v!=='none'){document.getElementById('rep-scope-modal').classList.add('show')}else{__repScope='forward'}}
 const ALARM_P=[{c:'on',l:'시작 시간'},{c:'5m',l:'5분 전'},{c:'10m',l:'10분 전'},{c:'30m',l:'30분 전'},{c:'1h',l:'1시간 전'},{c:'1d',l:'1일 전'},{c:'1w',l:'1주 전'}];
 const ALARM_DEF=['on','1h'];
 const EMOJI_D={'😀 자주쓰는':['😀','😂','🥰','😎','🤔','👍','❤️','🎉','✅','⭐','🔥','💯','🙏','😊','🥳','💪','👏','🎂','💍','📅','⏰','📌','✈️','🏠','🎁','💐'],'😃 표정':['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😋','😜','🤪','🤗','🤭','🤫','🤔','😐','😏','😒','🙄','😬','😌','😔','😪','😴','🥺','😢','😭','😤','😠'],'👋 손':['👋','🤚','✋','👌','✌️','🤞','🤟','🤘','👈','👉','👆','👇','👍','👎','✊','👊','👏','🙌','🤝','🙏','💪','🫶','👨‍👩‍👧‍👦','💑','👫'],'❤️ 하트':['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','❤️‍🔥','💕','💞','💓','💗','💖','💘','💝','💟','💋','💌','💐','🌹','🌷','🌸'],'🎉 이벤트':['🎉','🎊','🎂','🎁','🎈','🎀','🏆','🥇','⚽','🎮','🎯','🎬','🎤','🎵','🎶','🎹'],'🍔 음식':['🍔','🍕','🍟','🍩','🍰','☕','🍵','🧋','🍺','🍷','🥂','🍳','🥗','🍜','🍣','🌮'],'🏠 장소':['🏠','🏢','🏫','⛪','✈️','🚗','🚌','📱','💻','⌚','📷','💡','🔑','💰','📦','📌'],'⏰ 시간':['⏰','⏱️','⏳','📅','📆','☀️','🌤️','⛅','🌧️','🌈','🌙','⭐','✨','🌸','🍂','❄️']};
@@ -798,12 +831,12 @@ async function joinOB(){
   }catch(e){console.error(e);toast('참여 실패: '+e.message);document.getElementById('ob-loading').style.display='none'}
 }
 
-function gotoMonth(y,m){curY=y;curM=m;if(typeof renderCal==='function')renderCal();if(typeof fH==='function')fH(curY,curM)}
-function init(){const n=new Date();curY=n.getFullYear();curM=n.getMonth();try{const p=new URLSearchParams(location.search);const py=parseInt(p.get('y'));const pm=parseInt(p.get('m'));if(!isNaN(py)&&!isNaN(pm)){curY=py;curM=pm}}catch(e){}selDate=fmt(n);if(myOnly)document.getElementById('my-sw').classList.add('on');renderCal();fH(curY,curM)}
+function gotoMonth(y,m,d,eid){curY=y;curM=m;if(!isNaN(d)&&d>0){try{selDate=fmt(new Date(y,m,d))}catch(e){}}if(typeof renderCal==='function')renderCal();if(typeof fH==='function')fH(curY,curM);if(eid){setTimeout(()=>{try{if(typeof showDet==='function')showDet(eid)}catch(e){}},120)}}
+function init(){const n=new Date();curY=n.getFullYear();curM=n.getMonth();selDate=fmt(n);let pEid=null,pD_=NaN;try{const p=new URLSearchParams(location.search);const py=parseInt(p.get('y'));const pm=parseInt(p.get('m'));pD_=parseInt(p.get('d'));pEid=p.get('eid');if(!isNaN(py)&&!isNaN(pm)){curY=py;curM=pm;if(!isNaN(pD_)&&pD_>0){selDate=fmt(new Date(py,pm,pD_))}}}catch(e){}if(myOnly)document.getElementById('my-sw').classList.add('on');renderCal();fH(curY,curM);if(pEid){setTimeout(()=>{try{if(typeof showDet==='function')showDet(pEid)}catch(e){}},150)}}
 function toggleMy(){myOnly=!myOnly;localStorage.setItem('dd_myonly',myOnly);document.getElementById('my-sw').classList.toggle('on',myOnly);renderCal()}
 
 // Get events
-function gEvts(ds){return EVTS.filter(e=>{if(myOnly&&U){const t=e.targets||['all'];if(!t.includes('all')&&!t.includes(U.id))return false}if(e.date===ds)return true;if(e.endDate&&e.endDate>e.date&&ds>e.date&&ds<=e.endDate)return true;if(e.repeat!=='none'){const ed=pD(e.date),cd=pD(ds);if(cd<ed)return false;if(e.repeat==='yearly'&&ed.getMonth()===cd.getMonth()&&ed.getDate()===cd.getDate())return true;if(e.repeat==='monthly'&&ed.getDate()===cd.getDate())return true;if(e.repeat==='weekly'&&Math.floor((cd-ed)/864e5)%7===0)return true;if(e.repeat==='daily')return true}return false}).sort((a,b)=>{const am=a.endDate&&a.endDate>a.date?1:0,bm=b.endDate&&b.endDate>b.date?1:0;if(am!==bm)return bm-am;if(a.isAllDay!==b.isAllDay)return a.isAllDay?-1:1;return(a.startTime||'').localeCompare(b.startTime||'')})}
+function gEvts(ds){return EVTS.filter(e=>{if(myOnly&&U){const t=e.targets||['all'];if(!t.includes('all')&&!t.includes(U.id))return false}if((e.exceptions||[]).includes(ds))return false;if(e.date===ds)return true;if(e.endDate&&e.endDate>e.date&&ds>e.date&&ds<=e.endDate)return true;if(e.repeat!=='none'){if(e.repeatUntil&&ds>e.repeatUntil)return false;const ed=pD(e.date),cd=pD(ds);const rs=e.repeatScope||'forward';if(rs==='forward'&&cd<ed)return false;const dayMs=864e5;if(e.repeat==='yearly'&&ed.getMonth()===cd.getMonth()&&ed.getDate()===cd.getDate())return true;if(e.repeat==='monthly'&&ed.getDate()===cd.getDate())return true;if(e.repeat==='weekly'){const dd=Math.round((cd-ed)/dayMs);if(dd%7===0)return true}if(e.repeat==='daily')return true}return false}).sort((a,b)=>{const am=a.endDate&&a.endDate>a.date?1:0,bm=b.endDate&&b.endDate>b.date?1:0;if(am!==bm)return bm-am;if(a.isAllDay!==b.isAllDay)return a.isAllDay?-1:1;return(a.startTime||'').localeCompare(b.startTime||'')})}
 
 // === CALENDAR (cell-based, fixed height) ===
 function renderCal(){
@@ -816,7 +849,7 @@ function renderCal(){
   while(cells.length<42){const nd=cells.length-fd-dim+1;cells.push({d:nd,ds:fmt(new Date(curY,curM+1,nd)),o:true,dow:new Date(curY,curM+1,nd).getDay()})}
 
   const grid=document.createElement('div');grid.className='cal-grid';
-  const maxEvt=4; // max visible events per cell
+  const maxEvt=3; // max visible events per cell
   cells.forEach(c=>{
     const cell=document.createElement('div');
     const h=gH(c.ds);
@@ -848,13 +881,25 @@ function renderCal(){
   try{
     if(window.CalBridge&&window.CalBridge.setWidgetEvents){
       const mk=curY+'-'+String(curM+1).padStart(2,'0');
-      const lines=[];
-      EVTS.forEach(e=>{
-        if(!e.date||!e.date.startsWith(mk))return;
+      const mEvts=EVTS.filter(e=>e.date&&e.date.startsWith(mk));
+      mEvts.sort((a,b)=>{
+        if(a.date!==b.date)return a.date.localeCompare(b.date);
+        const aA=!!a.isAllDay,bA=!!b.isAllDay;
+        if(aA!==bA)return aA?-1:1;
+        return (a.startTime||'').localeCompare(b.startTime||'');
+      });
+      const lines=mEvts.map(e=>{
         let col='#5B6AFF';
-        if(e.categoryId){const c=(CATS||[]).find(x=>x.id===e.categoryId);if(c&&c.color)col=c.color}
-        const t=String(e.title||'').replace(/[\|\n]/g,' ').slice(0,20);
-        lines.push(e.date+'|'+t+'|'+col);
+        if(e.color)col=e.color;
+        else if(e.categoryId){const c=(CATS||[]).find(x=>x.id===e.categoryId);if(c&&c.color)col=c.color}
+        const clean=s=>String(s||'').replace(/[\|\n]/g,' ');
+        const icon=clean(e.catIcon);
+        const titleCombined=(icon?icon+' ':'')+clean(e.title).slice(0,30);
+        const tmTxt=e.isAllDay?'종일':((e.startTime||'')+(e.endTime?' ~ '+e.endTime:''));
+        const tgTxt=clean(tgtN(e)).slice(0,20);
+        const meta=tmTxt+(tgTxt?' · '+tgTxt:'');
+        const eid=clean(e.id);
+        return e.date+'|'+titleCombined+'|'+col+'|'+meta+'|'+eid;
       });
       window.CalBridge.setWidgetEvents(mk,lines.join('\n'));
     }
@@ -978,13 +1023,13 @@ function openEM(editId){
   if(editId){
     const e=EVTS.find(ev=>ev.id===editId);if(!e)return;
     document.getElementById('ef-title').value=e.title;document.getElementById('ef-date').value=e.date;document.getElementById('ef-end').value=e.endDate||e.date;
-    document.getElementById('ef-rep').value=e.repeat;document.getElementById('ef-memo').value=e.memo||'';
+    document.getElementById('ef-rep').value=e.repeat;document.getElementById('ef-memo').value=e.memo||'';__repScope=e.repeatScope||'forward';
     const ad=document.getElementById('ef-allday');if(e.isAllDay){ad.classList.add('on');document.getElementById('ef-tw').style.display='none'}else{ad.classList.remove('on');document.getElementById('ef-tw').style.display='block';setSTVal(e.startTime);setETVal(e.endTime)}
     customAlarms=e.customAlarms?[...e.customAlarms]:[];
     renderEC(e.color);renderAC(e.alarms||[]);renderTC(e.targets||['all']);renderCAL()
   }else{
     document.getElementById('ef-title').value='';document.getElementById('ef-date').value=selDate;document.getElementById('ef-end').value=selDate;
-    document.getElementById('ef-rep').value='none';document.getElementById('ef-memo').value='';
+    document.getElementById('ef-rep').value='none';document.getElementById('ef-memo').value='';__repScope='forward';
     document.getElementById('ef-allday').classList.remove('on');document.getElementById('ef-tw').style.display='block';
     setSTVal('09:00');setETVal('10:00');customAlarms=[];
     renderEC(null);renderAC(ALARM_DEF);renderTC(['all']);renderCAL()
@@ -1127,7 +1172,7 @@ function doSave(){
   const tgtIsAll=tgtAllItem?.classList.contains('checked');
   const targets=[];if(tgtIsAll){targets.push('all')}else{document.querySelectorAll('#ef-tgt [data-mid]').forEach(el=>{if(el.classList.contains('checked'))targets.push(el.dataset.mid)})}
   const ft=targets.length?targets:['all'];
-  const ed={id:editId||gid(),calendarId:CAL.fsId||CAL.id,title,date,endDate:document.getElementById('ef-end').value||date,startTime:isAll?null:getSTVal(),endTime:isAll?null:getETVal(),isAllDay:isAll,repeat:document.getElementById('ef-rep').value,color,catIcon,memo:document.getElementById('ef-memo').value,targets:ft,alarms,customAlarms:[...customAlarms],createdBy:U.id,comments:editId?(EVTS.find(e=>e.id===editId)?.comments||[]):[],createdAt:editId?(EVTS.find(e=>e.id===editId)?.createdAt||fmt(new Date())):fmt(new Date()),updatedAt:new Date().toISOString()};
+  const ed={id:editId||gid(),calendarId:CAL.fsId||CAL.id,title,date,endDate:document.getElementById('ef-end').value||date,startTime:isAll?null:getSTVal(),endTime:isAll?null:getETVal(),isAllDay:isAll,repeat:document.getElementById('ef-rep').value,repeatScope:__repScope,color,catIcon,memo:document.getElementById('ef-memo').value,targets:ft,alarms,customAlarms:[...customAlarms],createdBy:U.id,comments:editId?(EVTS.find(e=>e.id===editId)?.comments||[]):[],createdAt:editId?(EVTS.find(e=>e.id===editId)?.createdAt||fmt(new Date())):fmt(new Date()),updatedAt:new Date().toISOString()};
   if(editId){EVTS[EVTS.findIndex(e=>e.id===editId)]=ed;addN('✏️',`"${title}" 수정됨`)}else{EVTS.push(ed);addN('📅',`"${title}" 추가됨`)}
   save();
   // Sync event to Firestore
@@ -1200,7 +1245,11 @@ ${e.memo?`<div class="ed-row"><span class="icon">📝</span><div class="ed-memo"
   document.getElementById('det-modal').classList.add('show')
 }
 function addCmt(eid){const inp=document.getElementById('cmt-inp');const t=inp.value.trim();if(!t)return;const e=EVTS.find(ev=>ev.id===eid);if(!e)return;e.comments.push({userId:U.id,name:U.name,text:t,time:new Date().toLocaleString('ko-KR')});e.updatedAt=new Date().toISOString();save();saveEventToFS(e).catch(ex=>console.warn('comment sync:',ex));showDet(eid);addN('💬',`${U.name}님이 "${e.title}"에 댓글`)}
-function delE(id){const e=EVTS.find(ev=>ev.id===id);if(!e)return;if(!confirm(`"${e.title}" 삭제?`))return;DEL_LOG.push({eventId:e.id,deletedBy:U.id,deletedAt:new Date().toISOString(),snapshot:{...e}});addDeletedId(id);cancelAlarmsForEvent(id);EVTS=EVTS.filter(ev=>ev.id!==id);addN('🗑️',`"${e.title}" 삭제됨`);save();deleteEventFromFS(id).catch(e=>console.warn('delete sync error:',e));cOv('det-modal');renderCal();toast('삭제됨')}
+let __pendDelId=null;
+function delE(id){const e=EVTS.find(ev=>ev.id===id);if(!e)return;__pendDelId=id;if(e.repeat&&e.repeat!=='none'){document.getElementById('del-scope-msg').textContent=`"${e.title}"`;document.getElementById('del-scope-modal').classList.add('show')}else{document.getElementById('del-conf-msg').innerHTML=`<strong>"${esc(e.title)}"</strong><br>일정을 삭제하시겠습니까?`;document.getElementById('del-conf-modal').classList.add('show')}}
+function cancelDel(){__pendDelId=null;document.getElementById('del-conf-modal').classList.remove('show')}
+function confirmDelSimple(){document.getElementById('del-conf-modal').classList.remove('show');doDel('all')}
+function doDel(mode){const id=__pendDelId;__pendDelId=null;document.getElementById('del-scope-modal').classList.remove('show');document.getElementById('del-conf-modal').classList.remove('show');const e=EVTS.find(ev=>ev.id===id);if(!e)return;if(mode==='only'){const ex=e.exceptions||[];if(!ex.includes(selDate))ex.push(selDate);e.exceptions=ex;e.updatedAt=new Date().toISOString();save();saveEventToFS(e).catch(ex=>console.warn('sync:',ex));addN('🗑️',`"${e.title}" ${selDate} 제외`)}else if(mode==='future'){const d=pD(selDate);d.setDate(d.getDate()-1);e.repeatUntil=fmt(d);e.updatedAt=new Date().toISOString();save();saveEventToFS(e).catch(ex=>console.warn('sync:',ex));addN('🗑️',`"${e.title}" ${selDate} 이후 삭제`)}else{DEL_LOG.push({eventId:e.id,deletedBy:U.id,deletedAt:new Date().toISOString(),snapshot:{...e}});addDeletedId(id);cancelAlarmsForEvent(id);EVTS=EVTS.filter(ev=>ev.id!==id);addN('🗑️',`"${e.title}" 삭제됨`);save();deleteEventFromFS(id).catch(ex=>console.warn('delete sync error:',ex))}cOv('det-modal');renderCal();toast('삭제됨')}
 
 // === DATE JUMP ===
 let djS=0,djY,djM;
