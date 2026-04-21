@@ -16,17 +16,17 @@ html,body{height:100%}
 body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--t);max-width:480px;margin:0 auto;position:relative;overflow-x:hidden}
 
 /* TOP BAR */
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--c);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:100}
-.topbar-title{font-size:18px;font-weight:700;color:var(--p);display:flex;align-items:center;gap:6px}
-.topbar-title img{width:24px;height:24px;border-radius:6px}
-.topbar-right{display:flex;align-items:center;gap:6px}
-.tb-btn{background:none;border:none;font-size:18px;cursor:pointer;padding:6px;border-radius:8px;transition:background .12s}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:5px 12px;background:var(--c);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:100}
+.topbar-title{font-size:15px;font-weight:700;color:var(--p);display:flex;align-items:center;gap:5px}
+.topbar-title img{width:20px;height:20px;border-radius:5px}
+.topbar-right{display:flex;align-items:center;gap:4px}
+.tb-btn{background:none;border:none;font-size:15px;cursor:pointer;padding:4px;border-radius:6px;transition:background .12s}
 .tb-btn:hover{background:var(--pl)}
 /* my-only toggle switch */
-.my-sw{width:38px;height:22px;border-radius:11px;background:var(--bd);position:relative;cursor:pointer;transition:background .2s;border:none;flex-shrink:0}
+.my-sw{width:32px;height:18px;border-radius:9px;background:var(--bd);position:relative;cursor:pointer;transition:background .2s;border:none;flex-shrink:0}
 .my-sw.on{background:var(--p)}
-.my-sw::after{content:'👤';position:absolute;top:1px;left:1px;width:20px;height:20px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
-.my-sw.on::after{left:17px}
+.my-sw::after{content:'👤';position:absolute;top:1px;left:1px;width:16px;height:16px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.my-sw.on::after{left:15px}
 
 /* FAB */
 .fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:var(--p);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(91,106,255,.4);z-index:99;display:flex;align-items:center;justify-content:center;transition:transform .2s}
@@ -34,7 +34,8 @@ body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:
 
 /* CALENDAR */
 .month-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 14px}
-.month-nav button{background:none;border:none;font-size:18px;cursor:pointer;padding:8px;color:var(--t)}
+.month-nav button{background:none;border:none;font-size:18px;cursor:pointer;padding:8px 28px;color:var(--t)}
+.month-nav button .ar{display:inline-block;transform:scaleX(2.6);transform-origin:center;font-weight:600;color:#C5C5CC}
 .month-title{font-size:17px;font-weight:600;cursor:pointer;padding:6px 14px;border-radius:8px;transition:background .15s}
 .month-title:hover{background:var(--pl)}
 .wk-hdr{display:grid;grid-template-columns:repeat(7,1fr);padding:0 4px}
@@ -267,7 +268,7 @@ else img.src='temp/title_img_1.png';})();
 
 <!-- CALENDAR -->
 <div id="cal-view">
-<div class="month-nav"><button onclick="chgM(-1)">◀</button><div class="month-title" id="month-title" onclick="openDJ()"></div><button onclick="chgM(1)">▶</button></div>
+<div class="month-nav"><button onclick="chgM(-1)"><span class="ar">◀</span></button><div class="month-title" id="month-title" onclick="openDJ()"></div><button onclick="chgM(1)"><span class="ar">▶</span></button></div>
 <div class="wk-hdr"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
 <div class="cal-body" id="cal-body"></div>
 <div class="day-panel" id="day-panel"></div>

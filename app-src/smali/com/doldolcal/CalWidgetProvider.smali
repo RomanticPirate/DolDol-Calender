@@ -7,6 +7,73 @@
     return-void
 .end method
 
+# Computes a scale factor (0.7..2.0) based on current widget min height
+.method private static getScale(Landroid/appwidget/AppWidgetManager;I)F
+    .locals 6
+
+    :try_s
+    invoke-virtual {p0, p1}, Landroid/appwidget/AppWidgetManager;->getAppWidgetOptions(I)Landroid/os/Bundle;
+    move-result-object v0
+
+    const-string v1, "appWidgetMinHeight"
+    const/16 v2, 0x168
+    invoke-virtual {v0, v1, v2}, Landroid/os/Bundle;->getInt(Ljava/lang/String;I)I
+    move-result v0
+
+    int-to-float v0, v0
+    const v1, 0x43b40000
+    div-float v0, v0, v1
+
+    const v1, 0x3f800000
+    invoke-static {v0, v1}, Ljava/lang/Math;->min(FF)F
+    move-result v0
+    const v1, 0x3f333333
+    invoke-static {v0, v1}, Ljava/lang/Math;->max(FF)F
+    move-result v0
+    :try_e
+    .catch Ljava/lang/Exception; {:try_s .. :try_e} :_def
+    return v0
+
+    :_def
+    move-exception v1
+    const v0, 0x3f800000
+    return v0
+.end method
+
+.method public onAppWidgetOptionsChanged(Landroid/content/Context;Landroid/appwidget/AppWidgetManager;ILandroid/os/Bundle;)V
+    .locals 0
+    invoke-direct {p0, p1, p2, p3}, Lcom/doldolcal/CalWidgetProvider;->updateWidget(Landroid/content/Context;Landroid/appwidget/AppWidgetManager;I)V
+    return-void
+.end method
+
+# Saves current scale factor to prefs for factories to read
+.method private saveScale(Landroid/content/Context;Landroid/appwidget/AppWidgetManager;I)V
+    .locals 6
+
+    invoke-static {p2, p3}, Lcom/doldolcal/CalWidgetProvider;->getScale(Landroid/appwidget/AppWidgetManager;I)F
+    move-result v0
+
+    const-string v1, "widget_prefs"
+    const/4 v2, 0x0
+    invoke-virtual {p1, v1, v2}, Landroid/content/Context;->getSharedPreferences(Ljava/lang/String;I)Landroid/content/SharedPreferences;
+    move-result-object v1
+    invoke-interface {v1}, Landroid/content/SharedPreferences;->edit()Landroid/content/SharedPreferences$Editor;
+    move-result-object v1
+
+    new-instance v2, Ljava/lang/StringBuilder;
+    invoke-direct {v2}, Ljava/lang/StringBuilder;-><init>()V
+    const-string v3, "scale_"
+    invoke-virtual {v2, v3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    invoke-virtual {v2, p3}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
+    invoke-virtual {v2}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+    move-result-object v2
+
+    invoke-interface {v1, v2, v0}, Landroid/content/SharedPreferences$Editor;->putFloat(Ljava/lang/String;F)Landroid/content/SharedPreferences$Editor;
+    invoke-interface {v1}, Landroid/content/SharedPreferences$Editor;->commit()Z
+
+    return-void
+.end method
+
 # ──────── Helpers: read/write displayed year+month per widget ────────
 
 .method private static getDisplayedYear(Landroid/content/SharedPreferences;I)I
@@ -95,6 +162,8 @@
 .method private updateWidget(Landroid/content/Context;Landroid/appwidget/AppWidgetManager;I)V
     .locals 12
 
+    invoke-direct {p0, p1, p2, p3}, Lcom/doldolcal/CalWidgetProvider;->saveScale(Landroid/content/Context;Landroid/appwidget/AppWidgetManager;I)V
+
     :try_start_0
     invoke-virtual {p1}, Landroid/content/Context;->getPackageName()Ljava/lang/String;
     move-result-object v0
@@ -102,6 +171,19 @@
     new-instance v1, Landroid/widget/RemoteViews;
     const v2, 0x7f040000
     invoke-direct {v1, v0, v2}, Landroid/widget/RemoteViews;-><init>(Ljava/lang/String;I)V
+
+    # Set widget_list explicit height = 305dp * scale (API 31+)
+    invoke-static {p2, p3}, Lcom/doldolcal/CalWidgetProvider;->getScale(Landroid/appwidget/AppWidgetManager;I)F
+    move-result v0
+    const v2, 0x43988000
+    mul-float v0, v2, v0
+    const v2, 0x7f060005
+    const/4 v3, 0x1
+    :try_lh_s
+    invoke-virtual {v1, v2, v0, v3}, Landroid/widget/RemoteViews;->setViewLayoutHeight(IFI)V
+    :try_lh_e
+    .catch Ljava/lang/Throwable; {:try_lh_s .. :try_lh_e} :_lh_skip
+    :_lh_skip
 
     # v2 = prefs
     const-string v3, "widget_prefs"
@@ -210,6 +292,20 @@
     :title_norm
     const v6, 0x41700000
     :title_set
+
+    # Multiply by widget scale
+    new-instance v3, Ljava/lang/StringBuilder;
+    invoke-direct {v3}, Ljava/lang/StringBuilder;-><init>()V
+    const-string v7, "scale_"
+    invoke-virtual {v3, v7}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    invoke-virtual {v3, p3}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
+    invoke-virtual {v3}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+    move-result-object v3
+    const v7, 0x3f800000
+    invoke-interface {v2, v3, v7}, Landroid/content/SharedPreferences;->getFloat(Ljava/lang/String;F)F
+    move-result v7
+    mul-float v6, v6, v7
+
     const v3, 0x7f060002
     const/4 v7, 0x2
     invoke-virtual {v1, v3, v7, v6}, Landroid/widget/RemoteViews;->setTextViewTextSize(IIF)V

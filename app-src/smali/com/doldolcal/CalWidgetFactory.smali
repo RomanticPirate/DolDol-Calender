@@ -710,6 +710,25 @@
     const v11, 0x41300000
     :sz_done
 
+    # Multiply by widget scale
+    iget-object v0, p0, Lcom/doldolcal/CalWidgetFactory;->mContext:Landroid/content/Context;
+    const-string v2, "widget_prefs"
+    const/4 v12, 0x0
+    invoke-virtual {v0, v2, v12}, Landroid/content/Context;->getSharedPreferences(Ljava/lang/String;I)Landroid/content/SharedPreferences;
+    move-result-object v0
+    new-instance v2, Ljava/lang/StringBuilder;
+    invoke-direct {v2}, Ljava/lang/StringBuilder;-><init>()V
+    const-string v12, "scale_"
+    invoke-virtual {v2, v12}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    iget v12, p0, Lcom/doldolcal/CalWidgetFactory;->mWidgetId:I
+    invoke-virtual {v2, v12}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
+    invoke-virtual {v2}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+    move-result-object v2
+    const v12, 0x3f800000
+    invoke-interface {v0, v2, v12}, Landroid/content/SharedPreferences;->getFloat(Ljava/lang/String;F)F
+    move-result v12
+    mul-float v11, v11, v12
+
     iget-object v0, p0, Lcom/doldolcal/CalWidgetFactory;->mWeeks:Ljava/util/ArrayList;
     invoke-virtual {v0, p1}, Ljava/util/ArrayList;->get(I)Ljava/lang/Object;
     move-result-object v0

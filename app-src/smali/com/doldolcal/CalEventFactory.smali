@@ -7,6 +7,7 @@
 .field private mYear:I
 .field private mMonth:I
 .field private mTextColor:I
+.field private mScale:F
 .field private mSelectedDate:Ljava/lang/String;
 .field private mDays:[I
 .field private mTitles:[Ljava/lang/String;
@@ -22,6 +23,9 @@
 
     const v0, 0xff1A1A2E
     iput v0, p0, Lcom/doldolcal/CalEventFactory;->mTextColor:I
+
+    const v0, 0x3f800000
+    iput v0, p0, Lcom/doldolcal/CalEventFactory;->mScale:F
 
     const-string v0, "appWidgetId"
     const/4 v1, 0x0
@@ -373,6 +377,19 @@
     :_ccd
     iput v1, p0, Lcom/doldolcal/CalEventFactory;->mTextColor:I
 
+    new-instance v1, Ljava/lang/StringBuilder;
+    invoke-direct {v1}, Ljava/lang/StringBuilder;-><init>()V
+    const-string v2, "scale_"
+    invoke-virtual {v1, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    iget v2, p0, Lcom/doldolcal/CalEventFactory;->mWidgetId:I
+    invoke-virtual {v1, v2}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
+    invoke-virtual {v1}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+    move-result-object v1
+    const v2, 0x3f800000
+    invoke-interface {v0, v1, v2}, Landroid/content/SharedPreferences;->getFloat(Ljava/lang/String;F)F
+    move-result v1
+    iput v1, p0, Lcom/doldolcal/CalEventFactory;->mScale:F
+
     # Resolve year/month (fallback current)
     iget v1, p0, Lcom/doldolcal/CalEventFactory;->mYear:I
     iget v2, p0, Lcom/doldolcal/CalEventFactory;->mMonth:I
@@ -513,6 +530,22 @@
 
     const v5, 0x7f06003b
     invoke-virtual {v1, v5, v3}, Landroid/widget/RemoteViews;->setOnClickFillInIntent(ILandroid/content/Intent;)V
+
+    # Apply widget scale to font sizes
+    iget v3, p0, Lcom/doldolcal/CalEventFactory;->mScale:F
+    const/4 v2, 0x2
+    const v0, 0x7f060021
+    const v4, 0x41200000
+    mul-float v4, v4, v3
+    invoke-virtual {v1, v0, v2, v4}, Landroid/widget/RemoteViews;->setTextViewTextSize(IIF)V
+    const v0, 0x7f060022
+    const v4, 0x41400000
+    mul-float v4, v4, v3
+    invoke-virtual {v1, v0, v2, v4}, Landroid/widget/RemoteViews;->setTextViewTextSize(IIF)V
+    const v0, 0x7f06003a
+    const v4, 0x41200000
+    mul-float v4, v4, v3
+    invoke-virtual {v1, v0, v2, v4}, Landroid/widget/RemoteViews;->setTextViewTextSize(IIF)V
 
     return-object v1
 .end method
