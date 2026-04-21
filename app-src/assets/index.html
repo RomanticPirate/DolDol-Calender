@@ -13,6 +13,8 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--p:#5B6AFF;--pl:#E8EAFF;--bg:#F5F6FA;--c:#FFF;--t:#1A1A2E;--ts:#7C7C8A;--bd:#E8E8EE;--dg:#FF6B6B;--sc:#4ECDC4;--sh:0 2px 12px rgba(0,0,0,.08);--r:16px}
 html,body{height:100%}
+:root{color-scheme:light}
+input[type="date"],input[type="time"]{color-scheme:light}
 body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--t);max-width:480px;margin:0 auto;position:relative;overflow-x:hidden}
 
 /* TOP BAR */
@@ -165,7 +167,7 @@ textarea.fi{resize:none;height:68px}
 #cat-sp .sp{width:92%;max-width:440px;padding:28px 24px;max-height:85vh;overflow-y:auto}
 #cat-sp .sp h4{font-size:18px;margin-bottom:16px}
 #cat-sp .cat-item{padding:12px 14px;margin-bottom:6px;border-radius:10px}
-#cat-sp .cat-dot{width:28px;height:28px;font-size:16px}
+#cat-sp .cat-dot{min-width:28px;width:auto;height:28px;padding:0 5px;border-radius:14px;font-size:16px;white-space:nowrap}
 #cat-sp .cat-name{font-size:15px}
 #cat-sp .cat-del{font-size:18px}
 .sp h4{font-size:15px;font-weight:700;margin-bottom:12px}
@@ -181,7 +183,7 @@ textarea.fi{resize:none;height:68px}
 .stg-color-preview{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
 /* Category item */
 .cat-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--c);border-radius:8px;margin-bottom:4px}
-.cat-dot{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px}
+.cat-dot{min-width:22px;width:auto;height:22px;padding:0 4px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;white-space:nowrap}
 .cat-name{flex:1;font-size:13px}.cat-del{background:none;border:none;color:var(--dg);cursor:pointer;font-size:14px}
 
 /* Notif/List */
@@ -278,7 +280,7 @@ else img.src='temp/title_img_1.png';})();
 <!-- HISTORY POPUP -->
 <div class="popup-overlay" id="hist-popup"><div class="popup"><div class="popup-hdr"><h3>📜 히스토리</h3><button class="popup-x" onclick="cPop('hist-popup')">✕</button></div><div id="hist-content"></div></div></div>
 <!-- SETTINGS POPUP -->
-<div class="popup-overlay" id="stg-popup"><div class="popup"><div class="popup-hdr"><h3>⚙️ 설정</h3><button class="popup-x" onclick="cPop('stg-popup')">✕</button></div><div id="stg-content"></div></div></div>
+<div class="popup-overlay" id="stg-popup"><div class="popup"><div class="popup-hdr"><h3>⚙️ 설정 <span style="font-size:12px;color:var(--ts);font-weight:400">(앱 버전 v.1.16)</span></h3><button class="popup-x" onclick="cPop('stg-popup')">✕</button></div><div id="stg-content"></div></div></div>
 <!-- EVENT MODAL -->
 <div class="modal-overlay" id="evt-modal"><div class="modal" id="evt-modal-inner">
 <div class="modal-hdr"><h3 id="em-title">일정 추가</h3><button class="modal-x" onclick="cOv('evt-modal')">✕</button></div>
@@ -581,14 +583,19 @@ function startListeners(){
       // 소프트 삭제 처리
       if(re.deleted){
         try{
-          if(local&&re.deletedBy&&re.deletedBy!==U?.id&&!deletedIds.has(re.id)){
-            const tgts=local.targets||['all'];
-            if(tgts.includes('all')||tgts.includes(U?.id)){
-              notifyEventChange(local,'deleted',re.deletedBy);
+          if(local&&!deletedIds.has(re.id)){
+            // 다른 사람이 삭제한 경우 알림 표시
+            if(re.deletedBy&&re.deletedBy!==U?.id){
+              const tgts=local.targets||['all'];
+              if(tgts.includes('all')||tgts.includes(U?.id)){
+                notifyEventChange(local,'deleted',re.deletedBy);
+              }
             }
+            // 본인 삭제든 타인 삭제든 동일하게 정리
             addDeletedId(re.id);
+            cancelAlarmsForEvent(re.id);
           }
-        }catch(ex){console.warn('del notify:',ex)}
+        }catch(ex){console.warn('del handle:',ex)}
         return;
       }
 
@@ -1044,7 +1051,7 @@ function pickUC(c){U.color=c;if(CAL){const m=CAL.members.find(m=>m.id===U.id);if
 
 // Category manager
 const CAT_ICON_TABS={
-'⭐ 자주쓰는':['📌','💍','⌚','✈️','🎂','🎉','💼','🏠','❤️','⭐','📅','🔔','✅','📝','🎁','💐','🏥','🍽️','🚗','💰'],
+'⭐ 자주쓰는':['📌','💍','🤵‍♂️👰‍♀️','🪦','🏫','⌚','✈️','🎂','🎉','💼','🏠','❤️','⭐','🔔','✅','📝','🎁','💐','🏥','🍽️','🚗','💰'],
 '😀 표정':['😀','😂','🥰','😎','🤔','😊','🥳','😍','🤩','😢','😡','🥺','😴','🤒','😇','🫡','😏','🙄','🤗','😬'],
 '❤️ 하트':['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','❤️‍🔥','💕','💞','💓','💗','💖','💘','💝','💟','♥️','🩷'],
 '🎉 이벤트':['🎉','🎊','🎂','🎁','🎈','🎀','🏆','🥇','🥈','🥉','🎄','🎃','🎗️','🪅','🎆','🎇','✨','🎵','🎶','🎤'],
@@ -1361,7 +1368,9 @@ function notifyEventChange(e,action,byUserId){
   const tm=e.isAllDay?'종일':`${e.startTime||''}${e.endTime?'~'+e.endTime:''}`;
   const msg=`${ic} ${evtTitle} · ${tm}`;
   try{
-    if(window.CalBridge&&window.CalBridge.testAlarm){
+    if(window.CalBridge&&window.CalBridge.notifyNow){
+      window.CalBridge.notifyNow(title,msg);
+    }else if(window.CalBridge&&window.CalBridge.testAlarm){
       window.CalBridge.testAlarm(title,msg,500);
     }
   }catch(ex){console.warn('notify err:',ex)}

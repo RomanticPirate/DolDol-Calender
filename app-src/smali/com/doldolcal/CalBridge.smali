@@ -368,6 +368,47 @@
     return-void
 .end method
 
+# notifyNow(title, msg) — show notification immediately (bypasses AlarmManager rate limit)
+.method public notifyNow(Ljava/lang/String;Ljava/lang/String;)V
+    .locals 4
+    .annotation runtime Landroid/webkit/JavascriptInterface;
+    .end annotation
+
+    :try_n_s
+    iget-object v0, p0, Lcom/doldolcal/CalBridge;->mContext:Landroid/content/Context;
+
+    new-instance v1, Landroid/content/Intent;
+    const-class v2, Lcom/doldolcal/AlarmReceiver;
+    invoke-direct {v1, v0, v2}, Landroid/content/Intent;-><init>(Landroid/content/Context;Ljava/lang/Class;)V
+
+    const-string v2, "com.doldolcal.ALARM"
+    invoke-virtual {v1, v2}, Landroid/content/Intent;->setAction(Ljava/lang/String;)Landroid/content/Intent;
+
+    const-string v2, "alarm_title"
+    invoke-virtual {v1, v2, p1}, Landroid/content/Intent;->putExtra(Ljava/lang/String;Ljava/lang/String;)Landroid/content/Intent;
+    const-string v2, "alarm_message"
+    invoke-virtual {v1, v2, p2}, Landroid/content/Intent;->putExtra(Ljava/lang/String;Ljava/lang/String;)Landroid/content/Intent;
+
+    invoke-virtual {v0, v1}, Landroid/content/Context;->sendBroadcast(Landroid/content/Intent;)V
+    :try_n_e
+    .catch Ljava/lang/Exception; {:try_n_s .. :try_n_e} :_n_catch
+    return-void
+
+    :_n_catch
+    move-exception v0
+    return-void
+.end method
+
+# log(msg) — JS bridge to write to Android logcat (tag: doldolJS)
+.method public log(Ljava/lang/String;)V
+    .locals 2
+    .annotation runtime Landroid/webkit/JavascriptInterface;
+    .end annotation
+    const-string v0, "doldolJS"
+    invoke-static {v0, p1}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+    return-void
+.end method
+
 # downloadApk(url) — uses DownloadManager to download APK directly (no browser)
 .method public downloadApk(Ljava/lang/String;)V
     .locals 7
