@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <application android:hardwareAccelerated="true" android:icon="@mipmap/ic_launcher" android:label="돌돌 캘린더" android:theme="@android:style/Theme.DeviceDefault.NoActionBar" android:usesCleartextTraffic="true">
         <activity android:configChanges="keyboardHidden|orientation|screenSize" android:exported="true" android:launchMode="singleTask" android:name=".MainActivity">
             <intent-filter>
@@ -22,7 +24,14 @@
         </activity>
         <service android:name=".CalWidgetService" android:exported="false" android:permission="android.permission.BIND_REMOTEVIEWS" />
         <service android:name=".CalEventService" android:exported="false" android:permission="android.permission.BIND_REMOTEVIEWS" />
+        <service android:name=".BgListenerService" android:exported="false" android:foregroundServiceType="dataSync" />
         <receiver android:exported="true" android:name=".AlarmReceiver" />
+        <receiver android:exported="true" android:name=".BootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
         <receiver android:exported="true" android:name=".CalWidgetProvider">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>

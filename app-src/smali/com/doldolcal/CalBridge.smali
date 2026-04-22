@@ -3,6 +3,10 @@
 
 .field private mContext:Landroid/content/Context;
 
+# Static dedup state — shared across all CalBridge instances (main + bg WebView)
+.field private static sLastNotifKey:Ljava/lang/String; = null
+.field private static sLastNotifMs:J = 0x0L
+
 .method public constructor <init>(Landroid/content/Context;)V
     .locals 0
     invoke-direct {p0}, Ljava/lang/Object;-><init>()V
@@ -369,10 +373,43 @@
 .end method
 
 # notifyNow(title, msg) — show notification immediately (bypasses AlarmManager rate limit)
+# Includes dedup: skip if same title+msg was shown within 3000ms (prevents main+bg WebView dupes)
 .method public notifyNow(Ljava/lang/String;Ljava/lang/String;)V
-    .locals 4
+    .locals 10
     .annotation runtime Landroid/webkit/JavascriptInterface;
     .end annotation
+
+    # ---- DEDUP: build key = title + "|" + msg ----
+    new-instance v5, Ljava/lang/StringBuilder;
+    invoke-direct {v5}, Ljava/lang/StringBuilder;-><init>()V
+    invoke-virtual {v5, p1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    const-string v6, "|"
+    invoke-virtual {v5, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    invoke-virtual {v5, p2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    invoke-virtual {v5}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+    move-result-object v5
+
+    invoke-static {}, Ljava/lang/System;->currentTimeMillis()J
+    move-result-wide v6
+
+    sget-object v8, Lcom/doldolcal/CalBridge;->sLastNotifKey:Ljava/lang/String;
+    if-eqz v8, :_dd_no_dup
+    invoke-virtual {v5, v8}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v9
+    if-eqz v9, :_dd_no_dup
+
+    sget-wide v2, Lcom/doldolcal/CalBridge;->sLastNotifMs:J
+    sub-long v2, v6, v2
+    const-wide/16 v0, 0xbb8
+    cmp-long v4, v2, v0
+    if-gez v4, :_dd_no_dup
+    # Same key within 3000ms → skip
+    return-void
+
+    :_dd_no_dup
+    sput-object v5, Lcom/doldolcal/CalBridge;->sLastNotifKey:Ljava/lang/String;
+    sput-wide v6, Lcom/doldolcal/CalBridge;->sLastNotifMs:J
+    # ---- DEDUP END ----
 
     :try_n_s
     iget-object v0, p0, Lcom/doldolcal/CalBridge;->mContext:Landroid/content/Context;

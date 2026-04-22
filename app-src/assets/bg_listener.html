@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>bg</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div id="s">bg listener starting...</div>
+<script>
+(function(){
+  function log(m){
+    try{if(window.CalBridge&&window.CalBridge.log)window.CalBridge.log('[bg] '+m)}catch(e){}
+    try{var s=document.getElementById('s');if(s)s.textContent=m}catch(e){}
+  }
+
+  try{
+    firebase.initializeApp({
+      apiKey:"AIzaSyD8ZGwmpiLAvACR5OI1zxabE2evnqXPQ1Y",
+      authDomain:"doldol-calendar.firebaseapp.com",
+      projectId:"doldol-calendar",
+      storageBucket:"doldol-calendar.firebasestorage.app",
+      messagingSenderId:"904326266675",
+      appId:"1:904326266675:web:195d04ae46b04cdbeec846"
+    });
+  }catch(e){log('init err: '+e.message);return}
+
+  var db=firebase.firestore();
+  var auth=firebase.auth();
+  try{auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)}catch(e){}
+
+  var myUid=null, calId=null, unsubEvents=null, initialDone=false, lastSeenMs=0;
+
+  function start(){
+    if(!calId||!myUid||unsubEvents)return;
+    log('listening on '+calId+' uid='+myUid);
+    initialDone=false;
+    lastSeenMs=Date.now();
+    try{
+      unsubEvents=db.collection('calendars').doc(calId).collection('events')
+        .onSnapshot(function(snap){
+          snap.docChanges().forEach(function(ch){
+            try{
+              var data=ch.doc.data();
+              if(!data)return;
+              // skip initial snapshot
+              if(!initialDone)return;
+              // skip own changes
+              var updater=data.updatedBy||data.createdBy||'';
+              var deleter=data.deletedBy||'';
+              var actor=(ch.type==='removed'||data.deleted===true)?(deleter||updater):updater;
+              if(actor===myUid)return;
+
+              var action='modified';
+              if(ch.type==='added')action='new';
+              else if(ch.type==='removed')action='deleted';
+              else if(data.deleted===true)action='deleted';
+
+              var titles={'new':'📅 새 일정 추가됨','modified':'✏️ 일정 수정됨','deleted':'🗑️ 일정 삭제됨'};
+              var baseTitle=titles[action]||'📅 일정 알림';
+
+              // Lookup member name by actor UID (matches main app's "(by name)" format)
+              var byName='';
+              try{
+                if(actor){
+                  var calStr=localStorage.getItem('dd_calendar');
+                  if(calStr){
+                    var calObj=JSON.parse(calStr);
+                    if(calObj&&calObj.members){
+                      var m=calObj.members.find(function(x){return x.id===actor});
+                      if(m&&m.name)byName=m.name;
+                    }
+                  }
+                }
+              }catch(e){}
+              var title=baseTitle+(byName?(' (by '+byName+')'):'');
+
+              var ic=data.catIcon||'📅';
+              var evtTitle=data.title||'제목 없음';
+              var tm=data.isAllDay?'종일':((data.startTime||'')+(data.endTime?'~'+data.endTime:''));
+              var msg=ic+' '+evtTitle+' · '+tm;
+
+              log('notify: '+action+' '+evtTitle);
+              try{
+                if(window.CalBridge&&window.CalBridge.notifyNow){
+                  window.CalBridge.notifyNow(title,msg);
+                }
+              }catch(e){log('notify err: '+e.message)}
+            }catch(e){log('change err: '+e.message)}
+          });
+          if(!initialDone){initialDone=true;log('initial done')}
+        },function(err){
+          log('snap err: '+err.message);
+        });
+    }catch(e){log('listen err: '+e.message)}
+  }
+
+  function loadCalFromStorage(){
+    try{
+      var s=localStorage.getItem('dd_calendar');
+      if(!s)return null;
+      return JSON.parse(s);
+    }catch(e){return null}
+  }
+
+  // Poll for CAL availability (main app writes it via saveLocal after user picks calendar)
+  var calPollTimer=null;
+  function pollCal(){
+    var cal=loadCalFromStorage();
+    if(cal&&cal.fsId&&cal.fsId!==calId){
+      // Calendar changed → restart listener
+      if(unsubEvents){try{unsubEvents()}catch(e){}unsubEvents=null}
+      calId=cal.fsId;
+      start();
+    }
+  }
+  calPollTimer=setInterval(pollCal,5000);
+
+  auth.onAuthStateChanged(function(user){
+    if(!user){
+      auth.signInAnonymously().catch(function(e){log('signin err: '+e.message)});
+      return;
+    }
+    myUid=user.uid;
+    log('auth uid='+myUid);
+    var cal=loadCalFromStorage();
+    if(cal&&cal.fsId){calId=cal.fsId;start()}
+    else{log('waiting for calendar...')}
+  });
+})();
+</script>
+</body>
+</html>

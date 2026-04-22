@@ -227,5 +227,25 @@
 
     invoke-virtual {p0, v0}, Landroid/app/Activity;->setContentView(Landroid/view/View;)V
 
+    # Start BgListenerService (Foreground Service)
+    :_svc_try_s
+    new-instance v3, Landroid/content/Intent;
+    const-class v4, Lcom/doldolcal/BgListenerService;
+    invoke-direct {v3, p0, v4}, Landroid/content/Intent;-><init>(Landroid/content/Context;Ljava/lang/Class;)V
+    sget v4, Landroid/os/Build$VERSION;->SDK_INT:I
+    const/16 v5, 0x1a
+    if-lt v4, v5, :_svc_old
+    invoke-virtual {p0, v3}, Landroid/content/Context;->startForegroundService(Landroid/content/Intent;)Landroid/content/ComponentName;
+    goto :_svc_done
+    :_svc_old
+    invoke-virtual {p0, v3}, Landroid/content/Context;->startService(Landroid/content/Intent;)Landroid/content/ComponentName;
+    :_svc_done
+    :_svc_try_e
+    .catch Ljava/lang/Exception; {:_svc_try_s .. :_svc_try_e} :_svc_catch
+    goto :_svc_after
+    :_svc_catch
+    move-exception v3
+    :_svc_after
+
     return-void
 .end method
